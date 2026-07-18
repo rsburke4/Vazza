@@ -16,6 +16,7 @@
 #include "glm/gtc/quaternion.hpp"
 #include "ktx.h"
 #include "ktxvulkan.h"
+#include "Entity.h"
 #include <vulkan/vulkan.h>
 #include "slang/slang.h"
 #include "slang/slang-com-ptr.h"

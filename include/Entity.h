@@ -6,18 +6,23 @@
 #include <memory>
 #include <vector>
 
+class Component;
+
 class Entity {
 public:
-  template <typename T, typename... Args> T *AddComponent(Args &&...args) {
+
+    template <typename T, typename... Args>
+  T *AddComponent(Args &&...args) {
     static_assert(std::is_base_of<Component, T>::value,
                   "T must derive from Component");
     auto component = std::make_unique<T>(std::forward<Args>(args)...);
     T *componentPtr = component.get();
     components.push_back(std::move(component));
-    return componentPrt;
-  }
+    return componentPtr;
+}
 
-  template <typename T> T *GetComponent() {
+template <typename T>
+T *GetComponent() {
     for (auto &component : components) {
       if (T *result = dynamic_cast<T *>(component.get())) {
         return result;
@@ -26,11 +31,7 @@ public:
     return nullptr;
   }
 
-  void Update(float deltaTime) {
-    for (auto &component : components) {
-      component->Update(deltaTime);
-    }
-  }
+  void Update(float deltaTime);
 
 private:
   std::vector<std::unique_ptr<Component>> components;

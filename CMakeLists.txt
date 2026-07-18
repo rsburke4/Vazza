@@ -43,6 +43,7 @@ ExternalProject_Add(TINY_OBJ
 #	BUILD_ALWAYS 1
 #)
 
+
 include_directories(SYSTEM $ENV{VULKAN_SDK/include})
 find_library(Slang_LIBRARY NAMES slang slang-compiler HINTS "$ENV{VULKAN_SDK}/lib" REQUIRED)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/VMA)
@@ -78,7 +79,9 @@ set(VULKAN_INCLUDE "$ENV{VULKAN_SDK}/include")
 	#libktx.so
 	#)
 
-add_executable(${CMAKE_PROJECT_NAME} src/main.cpp assets/shader.slang)
+file(GLOB_RECURSE SOURCES "src/*.cpp")
+add_executable(${CMAKE_PROJECT_NAME} src/main.cpp ${SOURCES} assets/shader.slang)
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE include)
 
 #set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
 #	CMAKE_CXX_STANDARD 20
