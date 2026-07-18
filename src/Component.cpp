@@ -1,4 +1,7 @@
 #include "Component.h"
+#include "Entity.h"
+
+size_t ComponentTypeIDSystem::nextTypeID = 0;
 
 Component::~Component() {
   if (state != State::Destroyed) {

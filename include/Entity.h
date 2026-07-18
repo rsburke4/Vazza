@@ -4,37 +4,72 @@
 #include "Component.h"
 #include <iostream>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 class Component;
 
-class Entity {
-public:
+class Entity
+{
+  public:
+    template <typename T, typename... Args> T *AddComponent(Args &&...args)
+    {
+        static_assert(std::is_base_of<Component, T>::value, "T must derive from Component");
 
-    template <typename T, typename... Args>
-  T *AddComponent(Args &&...args) {
-    static_assert(std::is_base_of<Component, T>::value,
-                  "T must derive from Component");
-    auto component = std::make_unique<T>(std::forward<Args>(args)...);
-    T *componentPtr = component.get();
-    components.push_back(std::move(component));
-    return componentPtr;
-}
+        size_t typeID = Component::GetTypeID<T>();
 
-template <typename T>
-T *GetComponent() {
-    for (auto &component : components) {
-      if (T *result = dynamic_cast<T *>(component.get())) {
-        return result;
-      }
+        // Check if component of this type already exists in map
+        // This limits us to one of each component per entity? What if we want multiple
+        // Limitations breed creativty?
+        auto it = componentMap.find(typeID);
+        if (it != componentMap.end())
+        {
+            return static_cast<T *>(it->second);
+        }
+        // Otherwise add component
+        auto component = std::make_unique<T>(std::forward<Args>(args)...);
+        T *componentPtr = component.get();
+        componentMap[typeID] = componentPtr;
+        components.push_back(std::move(component));
+        return componentPtr;
     }
-    return nullptr;
-  }
 
-  void Update(float deltaTime);
+    template <typename T> T *GetComponent()
+    {
+        size_t typeID = Component::GetTypeID<T>();
+        auto it = componentMap.find(typeID);
+        if (it != componentMap.end())
+        {
+            return static_cast<T *>(it->second);
+        }
+        return nullptr;
+    }
 
-private:
-  std::vector<std::unique_ptr<Component>> components;
+    template <typename T> bool RemoveComponent()
+    {
+        size_t typeID = Component::GetTypeID<T>();
+        auto it = componentMap.find(typeID);
+        if (it != componentMap.end())
+        {
+            Component *componentPtr = it->second;
+            componentMap.erase(it);
+            for (auto compIt = components.begin(); compIt != components.end(); ++compIt)
+            {
+                if (compIt->get() == componentPtr)
+                {
+                    components.erase(compIt);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    void Update(float deltaTime);
+
+  private:
+    std::vector<std::unique_ptr<Component>> components;
+    std::unordered_map<size_t, Component *> componentMap;
 };
 
 #endif
