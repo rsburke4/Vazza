@@ -20,10 +20,10 @@ class Resource
     explicit Resource(const std::string &id) : resourceId(id)
     {
     }
-    virtual ~Resource();
+    virtual ~Resource() = default;
 
     // Core resource identity and state access methods
-    const std::string &GetID() const
+    const std::string &GetId() const
     {
         return resourceId;
     }
@@ -181,7 +181,7 @@ class ResourceHandle
         return resourceManager && resourceManager->HasResource<T>(resourceId);
     }
 
-    const std::string &GetID() const
+    const std::string &GetId() const
     {
         return resourceId;
     }
