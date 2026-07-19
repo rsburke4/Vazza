@@ -2,6 +2,7 @@
 #define __TEXTURE_H__
 
 #include "Resource.h"
+#include "Globals.h"
 #include <vulkan/vulkan.h>
 
 class Texture : public Resource{
@@ -19,9 +20,9 @@ class Texture : public Resource{
         int channels = 0;
         int layers = 0; //Will usually be 1?
 
-        unsigned char* LoadImageData(const std::string& filePath, int* width, int* height, int* channels);
+        unsigned char* LoadImageData(const std::string& filePath, int* width, int* height, int* channels, unsigned int* outVkFormat);
         void FreeImageData(unsigned char* data);
-        void CreateVulkanImage(unsigned char* data, int width, int height, int channels);
+        void CreateVulkanImage(unsigned char* data, int width, int height, int channels, unsigned int inVkFormat);
         VkDevice GetDevice();
 
     public:
