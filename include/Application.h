@@ -10,6 +10,12 @@ struct VulkanContext{
     VkQueue graphicsQueue{VK_NULL_HANDLE};
     VkCommandPool commandPool{VK_NULL_HANDLE};
     VmaAllocator allocator{VK_NULL_HANDLE};
+#ifdef NDEBUG
+	const bool enableValidationLayers = false;
+#else
+	const bool enableValidationLayers = true;
+#endif
+    const std::vector<const char*> deviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 };
 
 struct RenderingContext{
@@ -66,7 +72,7 @@ class Application
         return &renderingContext;
     }
 
-    const std::string name = "Test Application";
+    const std::string name = "VAZZA";
     const std::string version = "0.0.0";
 
     private:
