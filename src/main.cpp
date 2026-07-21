@@ -95,7 +95,7 @@ glm::ivec2 windowSize{};
 glm::vec3 camPose{0.0f, 0.0f, -6.0f};
 glm::vec3 objectRotations[3]{};
 Slang::ComPtr<slang::IGlobalSession> slangGlobalSession;
-
+/*
 bool checkValidationLayerSupport(){
 	uint32_t layerCount;
 	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -116,7 +116,7 @@ bool checkValidationLayerSupport(){
 	}
 	return true;
 }
-
+*/
 static inline void chk(VkResult result){
 	if(result != VK_SUCCESS){
 		std::cerr << "Vulkan call returned an error (" << result << ")\n";
@@ -155,7 +155,8 @@ int main(int argc, char* argv[]){
 		.apiVersion = VK_API_VERSION_1_3,
 	};
 	//Enable validation layers
-	if(enableValidationLayers && !checkValidationLayerSupport()){
+	//if(enableValidationLayers && !checkValidationLayerSupport()){
+	if(true){ //Hack to force valid compilation of things we no longer care about
 		throw std::runtime_error("Validation layers enabled but not available");
 	}
 

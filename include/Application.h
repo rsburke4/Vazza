@@ -1,6 +1,16 @@
+#ifndef __APPLICATION_H__
+#define __APPLICATION_H__
+
+#define VK_NO_PROTOTYPES
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define TINYOBJLOADE_IMPLEMENTATION
+
+
 #include <vulkan/vulkan.h>
 #include "vk_mem_alloc.h"
 #include <string>
+#include <vector>
 #include <iostream>
 
 struct VulkanContext{
@@ -16,6 +26,7 @@ struct VulkanContext{
 	const bool enableValidationLayers = true;
 #endif
     const std::vector<const char*> deviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    const std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
 };
 
 struct RenderingContext{
@@ -79,3 +90,5 @@ class Application
         VulkanContext vulkanContext;
         RenderingContext renderingContext;
 };
+
+#endif

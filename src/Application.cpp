@@ -1,6 +1,9 @@
 #include "Application.h"
 #include <vector>
 #include <vulkan/vulkan.h>
+#include "SDL3/SDL.h"
+#include "SDL3/SDL_vulkan.h"
+#include "volk.h"
 
 //TODO: Swap for agnostic function that checks for any layer support
 bool checkValidationLayerSupport(){
@@ -53,12 +56,13 @@ void Application::InitializeVulkan(){
 		.enabledExtensionCount = instanceExtensionsCount,
 		.ppEnabledExtensionNames = instanceExtensions
 	};
-	if(enableValidationLayers){
-			instanceCI.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-			instanceCI.ppEnabledLayerNames = validationLayers.data();
+	if(vulkanContext.enableValidationLayers){
+			instanceCI.enabledLayerCount = static_cast<uint32_t>(vulkanContext.validationLayers.size());
+			instanceCI.ppEnabledLayerNames = vulkanContext.validationLayers.data();
 	}
     chk(vkCreateInstance(&instanceCI, nullptr, &vulkanContext.instance));
-	volkLoadInstance(instance);
+	volkLoadInstance(vulkanContext.instance);
+
 
 	//Check Queue families for supported features
 

@@ -57,7 +57,7 @@ set(TINY_OBJ_LIB ${CMAKE_CURRENT_BINARY_DIR}/tinyobjloader/libtinyobjloader.a)
 #set(KTX_LIB ${CMAKE_CURRENT_BINARY_DIR}/KTX-Software/libktx.so)
 
 #set(GLM_LIB ${CMAKE_CURRENT_BINARY_DIR}/glm/build/glm/libglm.a)
-#set(VMA_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/VMA/include)
+set(VMA_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/VMA/include)
 set(SDL_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/SDL/include)
 set(VOLK_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/volk)
 set(TINY_OBJ_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/tinyobjloader/)

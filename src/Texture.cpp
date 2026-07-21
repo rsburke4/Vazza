@@ -1,8 +1,11 @@
+#include "Application.h"
+#include "volk.h"
 #include "Texture.h"
 #include "ktx.h"
 #include "ktxvulkan.h"
 #include <stdexcept>
 #include <cstring>
+#include <vulkan/vulkan.h>
 
 bool Texture::doLoad(){
     //Work with all ktx internally

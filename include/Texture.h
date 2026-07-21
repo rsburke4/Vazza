@@ -2,7 +2,7 @@
 #define __TEXTURE_H__
 
 #include "Resource.h"
-#include "Globals.h"
+#include "Application.h"
 #include <vulkan/vulkan.h>
 
 class Texture : public Resource{
