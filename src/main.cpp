@@ -152,16 +152,17 @@ int main(int argc, char* argv[]){
 	VkApplicationInfo appInfo{
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		.pApplicationName = "How to Vulkan",
-		.apiVersion = VK_API_VERSION_1_3,
+		.apiVersion = VK_API_VERSION_1_2,
 	};
 	//Enable validation layers
 	//if(enableValidationLayers && !checkValidationLayerSupport()){
-	if(true){ //Hack to force valid compilation of things we no longer care about
+	if(false){ //Hack to force valid compilation of things we no longer care about
 		throw std::runtime_error("Validation layers enabled but not available");
 	}
 
 	uint32_t instanceExtensionsCount{ 0 };
 	char const* const* instanceExtensions{ SDL_Vulkan_GetInstanceExtensions(&instanceExtensionsCount) };
+
 	VkInstanceCreateInfo instanceCI{
 		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		.pNext = nullptr,
@@ -219,27 +220,34 @@ int main(int argc, char* argv[]){
 		.pQueuePriorities = &qfpriorities
 	};
 	//Logical device extension and feature selection
-	const std::vector<const char*> deviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	const std::vector<const char*> deviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME, "VK_KHR_dynamic_rendering", "VK_KHR_synchronization2" };
+
+	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeatures{
+    	.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES,
+    	.pNext = nullptr,
+    	.dynamicRendering = true
+	};
+	VkPhysicalDeviceSynchronization2Features sync2Features {
+    	.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
+    	.pNext = &dynamicRenderingFeatures,
+    	.synchronization2 = true
+	};
 	VkPhysicalDeviceVulkan12Features enabledVk12Features{
 		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+		.pNext = &sync2Features,
 		.descriptorIndexing = true,
 		.shaderSampledImageArrayNonUniformIndexing = true,
 		.descriptorBindingVariableDescriptorCount = true,
 		.runtimeDescriptorArray = true,
 		.bufferDeviceAddress = true
 	};
-	VkPhysicalDeviceVulkan13Features enabledVk13Features{
-		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-		.pNext = &enabledVk12Features,
-		.synchronization2 = true,
-		.dynamicRendering = true
-	};
+
 	VkPhysicalDeviceFeatures enabledVk10Features{
 		.samplerAnisotropy = VK_TRUE
 	};
 	VkDeviceCreateInfo deviceCI{
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-		.pNext = &enabledVk13Features,
+		.pNext = &enabledVk12Features,
 		.queueCreateInfoCount = 1,
 		.pQueueCreateInfos = &queueCI,
 		.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
@@ -348,6 +356,8 @@ int main(int argc, char* argv[]){
 	};
 	chk(vkCreateImageView(device, &depthViewCI, nullptr, &depthImageView));
 
+	std::cout << "Image View\n";
+
 	//Load mesh (DOES NOT HANDLE BAD DATA WELL)
 	//ALL DATA MUST HAVE NORMALS AND TEXTURE COORDS
 	//TODO: switch to gltf/glb
@@ -377,7 +387,7 @@ int main(int argc, char* argv[]){
 		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT
 	};
 	VmaAllocationCreateInfo vBufferAllocCI{
-		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
 		.usage = VMA_MEMORY_USAGE_AUTO
 	};
 	VmaAllocationInfo vBufferAllocInfo{};
@@ -392,7 +402,7 @@ int main(int argc, char* argv[]){
 			.usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
 		};
 		VmaAllocationCreateInfo uBufferAllocCI{
-			.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+			.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
 			.usage = VMA_MEMORY_USAGE_AUTO
 		};
 		chk(vmaCreateBuffer(allocator, &uBufferCI, &uBufferAllocCI, &shaderDataBuffers[i].buffer, &shaderDataBuffers[i].allocation, &shaderDataBuffers[i].allocationInfo));
@@ -401,6 +411,7 @@ int main(int argc, char* argv[]){
 			.buffer = shaderDataBuffers[i].buffer
 		};
 		shaderDataBuffers[i].deviceAddress = vkGetBufferDeviceAddress(device, &uBufferBdaInfo);
+		std::cout << "Shader data buffer\n";
 	}
 
 	//Create syncronization objects
@@ -419,6 +430,8 @@ int main(int argc, char* argv[]){
 	for(auto &semaphore : renderCompleteSemaphores){
 		chk(vkCreateSemaphore(device, &semaphoreCI, nullptr, &semaphore));
 	}
+
+	std::cout << "Fences and semaphores\n";
 
 	//Grab a command buffer from a command pool
 	VkCommandPoolCreateInfo commandPoolCI{
@@ -495,7 +508,7 @@ int main(int argc, char* argv[]){
 			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
 		};
 		chk(vkBeginCommandBuffer(cbOneTime, &cbOneTimeBI));
-		VkImageMemoryBarrier2 barrierTexImage{
+		VkImageMemoryBarrier2KHR barrierTexImage{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 			.srcStageMask = VK_PIPELINE_STAGE_2_NONE,
 			.srcAccessMask = VK_ACCESS_2_NONE,
@@ -511,7 +524,7 @@ int main(int argc, char* argv[]){
 			.imageMemoryBarrierCount = 1,
 			.pImageMemoryBarriers = &barrierTexImage
 		};
-		vkCmdPipelineBarrier2(cbOneTime, &barrierTexInfo);
+		vkCmdPipelineBarrier2KHR(cbOneTime, &barrierTexInfo);
 		std::vector<VkBufferImageCopy> copyRegions{};
 		for(uint32_t j = 0; j < ktxTexture->numLevels; j++){
 			ktx_size_t mipOffset{0};
@@ -523,7 +536,7 @@ int main(int argc, char* argv[]){
 			});
 		}
 		vkCmdCopyBufferToImage(cbOneTime, imgSrcBuffer, textures[i].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(copyRegions.size()), copyRegions.data());
-		VkImageMemoryBarrier2 barrierTexRead{
+		VkImageMemoryBarrier2KHR barrierTexRead{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 			.srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
 			.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -535,7 +548,7 @@ int main(int argc, char* argv[]){
 			.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = ktxTexture->numLevels, .layerCount = 1}
 		};
 		barrierTexInfo.pImageMemoryBarriers = &barrierTexRead;
-		vkCmdPipelineBarrier2(cbOneTime, &barrierTexInfo);
+		vkCmdPipelineBarrier2KHR(cbOneTime, &barrierTexInfo);
 		chk(vkEndCommandBuffer(cbOneTime));
 		VkSubmitInfo oneTimeSI{
 			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -584,6 +597,7 @@ int main(int argc, char* argv[]){
 		.pBindings = &descLayoutBindingTex
 	 };
 	chk(vkCreateDescriptorSetLayout(device, &descLayoutTexCI, nullptr, &descriptorSetLayoutTex));
+	std::cout << "Descriptor set layout\n";
 	
 	VkDescriptorPoolSize poolSize{
 		.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -749,6 +763,7 @@ int main(int argc, char* argv[]){
 		.layout = pipelineLayout
 	};
 	chk(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &pipeline));
+	std::cout << "Pipeline\n";
 
 	uint64_t lastTime{ SDL_GetTicks() };
 	bool quit{ false };
@@ -834,8 +849,8 @@ int main(int argc, char* argv[]){
 			};
 			chk(vkBeginCommandBuffer(cb, &cbBI));
 
-			std::array<VkImageMemoryBarrier2, 2> outputBarriers{
-				VkImageMemoryBarrier2{
+			std::array<VkImageMemoryBarrier2KHR, 2> outputBarriers{
+				VkImageMemoryBarrier2KHR{
 					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 					.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 					.srcAccessMask = 0,
@@ -846,7 +861,7 @@ int main(int argc, char* argv[]){
 					.image = swapchainImages[imageIndex],
 					.subresourceRange{ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = 1, .layerCount = 1 }
 				},
-				VkImageMemoryBarrier2{
+				VkImageMemoryBarrier2KHR{
 					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 					.srcStageMask = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT,
 					.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
@@ -863,7 +878,7 @@ int main(int argc, char* argv[]){
 				.imageMemoryBarrierCount = 2,
 				.pImageMemoryBarriers = outputBarriers.data()
 			};
-			vkCmdPipelineBarrier2(cb, &barrierDependencyInfo);
+			vkCmdPipelineBarrier2KHR(cb, &barrierDependencyInfo);
 
 			VkRenderingAttachmentInfo colorAttachmentInfo{
 				.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -889,7 +904,7 @@ int main(int argc, char* argv[]){
 				.pColorAttachments = &colorAttachmentInfo,
 				.pDepthAttachment = &depthAttachmentInfo
 			};
-			vkCmdBeginRendering(cb, &renderingInfo);
+			vkCmdBeginRenderingKHR(cb, &renderingInfo);
 
 			VkViewport vp{
 				.width = static_cast<float>(windowSize.x),
@@ -908,9 +923,9 @@ int main(int argc, char* argv[]){
 			vkCmdBindIndexBuffer(cb, vBuffer, vBufSize, VK_INDEX_TYPE_UINT16);
 			vkCmdPushConstants(cb, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(VkDeviceAddress), &shaderDataBuffers[frameIndex].deviceAddress);
 			vkCmdDrawIndexed(cb, indexCount, 3, 0, 0, 0);
-			vkCmdEndRendering(cb);
+			vkCmdEndRenderingKHR(cb);
 
-			VkImageMemoryBarrier2 barrierPresent{
+			VkImageMemoryBarrier2KHR barrierPresent{
 				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
 				.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
 				.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -926,7 +941,7 @@ int main(int argc, char* argv[]){
 				.imageMemoryBarrierCount = 1,
 				.pImageMemoryBarriers = &barrierPresent
 			};
-			vkCmdPipelineBarrier2(cb, &barrierPresentDependencyInfo);
+			vkCmdPipelineBarrier2KHR(cb, &barrierPresentDependencyInfo);
 			vkEndCommandBuffer(cb);
 
 
