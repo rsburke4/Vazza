@@ -92,8 +92,8 @@ void Application::InitializeVulkan(){
 	//If not, I have failed.
 	for(size_t i = 0; i < queueFamilies.size(); i++){
 		if(queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT){
-			if(SDL_Vulkan_GetPresentationSupport(vulkanContext.instance, vulkanContext.physicalDevice, i) == VK_SUCCESS){
-				queueFamily = i;
+			if(SDL_Vulkan_GetPresentationSupport(vulkanContext.instance, vulkanContext.physicalDevice, i) == VK_TRUE){
+				vulkanContext.graphicsQueueFamily = i;
 				break;
 			}
 		}
@@ -104,7 +104,7 @@ void Application::InitializeVulkan(){
 	const float qfpriorities{ 1.0f };
 	VkDeviceQueueCreateInfo queueCI{
 		.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-		.queueFamilyIndex = queueFamily,
+		.queueFamilyIndex = vulkanContext.graphicsQueueFamily,
 		.queueCount = 1,
 		.pQueuePriorities = &qfpriorities
 	};
@@ -144,7 +144,7 @@ void Application::InitializeVulkan(){
 		.pEnabledFeatures = &enabledVk10Features
 	};
 	chk(vkCreateDevice(vulkanContext.physicalDevice, &deviceCI, nullptr, &vulkanContext.device));
-	vkGetDeviceQueue(vulkanContext.device, queueFamily, 0, &vulkanContext.graphicsQueue);
+	vkGetDeviceQueue(vulkanContext.device, vulkanContext.graphicsQueueFamily, 0, &vulkanContext.graphicsQueue);
 
 	
 	//Set up VMA

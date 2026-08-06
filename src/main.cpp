@@ -6,6 +6,7 @@
 
 #include <iostream>
 
+#include "Application.h"
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_vulkan.h"
 #include "vk_mem_alloc.h"
@@ -143,119 +144,17 @@ static inline void chkSwapchain(VkResult result){
 }
 
 int main(int argc, char* argv[]){
+	Application tutorialApplication;
+	tutorialApplication.InitializeVulkan();
+
+	device = tutorialApplication.GetVulkanContext()->device;
+	instance = tutorialApplication.GetVulkanContext()->instance;
+	VkPhysicalDevice physicalDevice = tutorialApplication.GetVulkanContext()->physicalDevice;
+	VkQueue queue = tutorialApplication.GetVulkanContext()->graphicsQueue;
+	uint32_t queueFamily = tutorialApplication.GetVulkanContext()->graphicsQueueFamily;
+
 	//Load external modules
-	chk(SDL_Init(SDL_INIT_VIDEO));
-	chk(SDL_Vulkan_LoadLibrary(NULL));
-	volkInitialize();
 
-	//Init Vulkan
-	VkApplicationInfo appInfo{
-		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-		.pApplicationName = "How to Vulkan",
-		.apiVersion = VK_API_VERSION_1_2,
-	};
-	//Enable validation layers
-	//if(enableValidationLayers && !checkValidationLayerSupport()){
-	if(false){ //Hack to force valid compilation of things we no longer care about
-		throw std::runtime_error("Validation layers enabled but not available");
-	}
-
-	uint32_t instanceExtensionsCount{ 0 };
-	char const* const* instanceExtensions{ SDL_Vulkan_GetInstanceExtensions(&instanceExtensionsCount) };
-
-	VkInstanceCreateInfo instanceCI{
-		.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-		.pNext = nullptr,
-		.pApplicationInfo = &appInfo,
-		.enabledExtensionCount = instanceExtensionsCount,
-		.ppEnabledExtensionNames = instanceExtensions,
-	};
-	if(enableValidationLayers){
-			instanceCI.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-			instanceCI.ppEnabledLayerNames = validationLayers.data();
-	}
-
-	chk(vkCreateInstance(&instanceCI, nullptr, &instance));
-	volkLoadInstance(instance);
-
-	//Select Device (First device in list by default)
-	uint32_t deviceCount{ 0 };
-	chk(vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr));
-	std::vector<VkPhysicalDevice> devices(deviceCount);
-	chk(vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data()));
-	uint32_t deviceIndex{ 0 };
-	//TODO: More inteligent device selection based on properties
-	if(argc > 1) {
-		deviceIndex = std::stoi(argv[1]);
-		assert(deviceIndex < deviceCount);
-	}
-	VkPhysicalDeviceProperties2 deviceProperties{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
-	vkGetPhysicalDeviceProperties2(devices[deviceIndex], &deviceProperties);
-	std::cout << "Selected device: " << deviceProperties.properties.deviceName << std::endl;
-	//Look through queue families available
-	uint32_t queueFamilyCount{ 0 };
-	vkGetPhysicalDeviceQueueFamilyProperties(devices[deviceIndex], &queueFamilyCount, nullptr);
-	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(devices[deviceIndex], &queueFamilyCount, queueFamilies.data());
-	uint32_t queueFamily{ 0 };
-	//Select a queueFamily to work on from the device. Only graphics Q for now. Other work queues are available usually.
-	//This might drive device selection as well.
-	//Anything I want to run at the moment should be alble to run on crummy GPUs just fine.
-	//If not, I have failed.
-	for(size_t i = 0; i < queueFamilies.size(); i++){
-		if(queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT){
-			if(SDL_Vulkan_GetPresentationSupport(instance, devices[deviceIndex], i) == VK_SUCCESS){
-				queueFamily = i;
-				break;
-			}
-		}
-	}
-	//Redundant, but this will assert/crash if a queue wasn't found earlier
-	chk(SDL_Vulkan_GetPresentationSupport(instance, devices[deviceIndex], queueFamily));
-	const float qfpriorities{ 1.0f };
-	VkDeviceQueueCreateInfo queueCI{
-		.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-		.queueFamilyIndex = queueFamily,
-		.queueCount = 1,
-		.pQueuePriorities = &qfpriorities
-	};
-	//Logical device extension and feature selection
-	const std::vector<const char*> deviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME, "VK_KHR_dynamic_rendering", "VK_KHR_synchronization2" };
-
-	VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeatures{
-    	.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES,
-    	.pNext = nullptr,
-    	.dynamicRendering = true
-	};
-	VkPhysicalDeviceSynchronization2Features sync2Features {
-    	.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
-    	.pNext = &dynamicRenderingFeatures,
-    	.synchronization2 = true
-	};
-	VkPhysicalDeviceVulkan12Features enabledVk12Features{
-		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-		.pNext = &sync2Features,
-		.descriptorIndexing = true,
-		.shaderSampledImageArrayNonUniformIndexing = true,
-		.descriptorBindingVariableDescriptorCount = true,
-		.runtimeDescriptorArray = true,
-		.bufferDeviceAddress = true
-	};
-
-	VkPhysicalDeviceFeatures enabledVk10Features{
-		.samplerAnisotropy = VK_TRUE
-	};
-	VkDeviceCreateInfo deviceCI{
-		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-		.pNext = &enabledVk12Features,
-		.queueCreateInfoCount = 1,
-		.pQueueCreateInfos = &queueCI,
-		.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
-		.ppEnabledExtensionNames = deviceExtensions.data(),
-		.pEnabledFeatures = &enabledVk10Features
-	};
-	chk(vkCreateDevice(devices[deviceIndex], &deviceCI, nullptr, &device));
-	vkGetDeviceQueue(device, queueFamily, 0, &queue);
 
 	//VMA Setup
 	VmaVulkanFunctions vkFunctions{
@@ -265,7 +164,7 @@ int main(int argc, char* argv[]){
 	};
 	VmaAllocatorCreateInfo allocatorCI{
 		.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
-		.physicalDevice = devices[deviceIndex],
+		.physicalDevice = physicalDevice,
 		.device = device,
 		.pVulkanFunctions = &vkFunctions,
 		.instance = instance
@@ -278,7 +177,7 @@ int main(int argc, char* argv[]){
 	chk(SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface));
 	chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
 	VkSurfaceCapabilitiesKHR surfaceCaps{};
-	chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(devices[deviceIndex], surface, &surfaceCaps));
+	chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCaps));
 
 	//Swapchain creation
 	//TODO: This is the bare minimum, and should be extended later
@@ -324,7 +223,7 @@ int main(int argc, char* argv[]){
 	VkFormat depthFormat{ VK_FORMAT_UNDEFINED };
 	for(VkFormat& format : depthFormatList){
 		VkFormatProperties2 formatProperties = { .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2 };
-		vkGetPhysicalDeviceFormatProperties2(devices[deviceIndex], format, &formatProperties);
+		vkGetPhysicalDeviceFormatProperties2(physicalDevice, format, &formatProperties);
 		if(formatProperties.formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT){
 			depthFormat = format;
 			break;
@@ -774,7 +673,7 @@ int main(int argc, char* argv[]){
 			//chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
 			updateSwapchain = false;
 			chk(vkDeviceWaitIdle(device));
-			chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(devices[deviceIndex], surface, &surfaceCaps));
+			chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCaps));
 			swapchainCI.oldSwapchain = swapchain;
 			//swapchainCI.imageExtent = {.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y) };
 			swapchainCI.imageExtent = surfaceCaps.currentExtent;

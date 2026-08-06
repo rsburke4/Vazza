@@ -18,6 +18,7 @@ struct VulkanContext{
     VkPhysicalDevice physicalDevice{VK_NULL_HANDLE};
     VkDevice device{VK_NULL_HANDLE};
     VkQueue graphicsQueue{VK_NULL_HANDLE};
+    uint32_t graphicsQueueFamily = -1;
     VkCommandPool commandPool{VK_NULL_HANDLE};
     VmaAllocator allocator{VK_NULL_HANDLE};
 #ifdef NDEBUG
@@ -25,7 +26,7 @@ struct VulkanContext{
 #else
 	const bool enableValidationLayers = true;
 #endif
-    const std::vector<const char*> deviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    const std::vector<const char*> deviceExtensions{ VK_KHR_SWAPCHAIN_EXTENSION_NAME, "VK_KHR_dynamic_rendering", "VK_KHR_synchronization2" };
     const std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
 };
 
