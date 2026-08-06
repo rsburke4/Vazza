@@ -43,6 +43,7 @@ class Application
     void DrawFrame();
 
 
+    //TODO: Make static or move to global class
     void chk(VkResult result)
     {
         if (result != VK_SUCCESS)
