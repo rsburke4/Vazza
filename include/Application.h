@@ -47,7 +47,22 @@ struct RenderingContext{
     const uint32_t maxFramesInFlight{ 2 };
     uint32_t imageIndex{ 0 };
     uint32_t frameIndex{ 0 };
+
+    //Swapchain information
     bool updateSwapchain{ false };
+    uint32_t swapchainImageCount = 0;
+    std::vector<VkImage> swapchainImages;
+    std::vector<VkImageView> swapchainImageViews;
+    VkSwapchainKHR swapchain{VK_NULL_HANDLE};
+    VkExtent2D swapchainExtent;
+    VkFormat swapchainFormat{VK_FORMAT_UNDEFINED};
+
+    //Depth image information
+    //Wouldn't this be better to have under a camera object?
+    VkFormat depthFormat{VK_FORMAT_UNDEFINED};
+    VkImage depthImage{VK_NULL_HANDLE};
+    VkImageView depthImageView{VK_NULL_HANDLE};
+    VmaAllocation depthImageAllocation;
 };
 
 class Application
@@ -94,9 +109,11 @@ class Application
         return &vulkanContext;
     }
 
-    RenderingContext* GetRenderingContext(){
+    const RenderingContext* GetRenderingContext() const{
         return &renderingContext;
     }
+
+    void rebuildSwapchain();
 
     const std::string name = "VAZZA";
     const std::string version = "0.0.0";

@@ -159,15 +159,27 @@ int main(int argc, char* argv[]){
 	SDL_Window *window = tutorialApplication.GetVulkanContext()->window;
 	windowSize = tutorialApplication.GetVulkanContext()->windowSize;
 
+	//Swapchain stuff
+	VkFormat imageFormat = tutorialApplication.GetRenderingContext()->swapchainFormat;
+	swapchainImages = tutorialApplication.GetRenderingContext()->swapchainImages;
+	uint32_t imageCount = tutorialApplication.GetRenderingContext()->swapchainImageCount;
+	swapchainImageViews = tutorialApplication.GetRenderingContext()->swapchainImageViews;
+	swapchain = tutorialApplication.GetRenderingContext()->swapchain;
+
 
 	//Swapchain creation
 	//TODO: This is the bare minimum, and should be extended later
-	VkExtent2D swapchainExtent{ surfaceCaps.currentExtent };
-	if(surfaceCaps.currentExtent.width = 0xFFFFFFFF){
+	VkExtent2D swapchainExtent = tutorialApplication.GetRenderingContext()->swapchainExtent;
+	/*VkExtent2D swapchainExtent{ surfaceCaps.currentExtent };
+	if(surfaceCaps.currentExtent.width == 0xFFFFFFFF){
 		swapchainExtent = {.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y)};
-	}
+	}*/
 
-	const VkFormat imageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
+	depthImage = tutorialApplication.GetRenderingContext()->depthImage;
+	depthImageView = tutorialApplication.GetRenderingContext()->depthImageView;
+	VkFormat depthFormat = tutorialApplication.GetRenderingContext()->depthFormat;
+
+	/*const VkFormat imageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
 	VkSwapchainCreateInfoKHR swapchainCI{
 		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
 		.surface = surface,
@@ -196,11 +208,11 @@ int main(int argc, char* argv[]){
 		.subresourceRange{.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = 1, .layerCount = 1}
 		};
 		chk(vkCreateImageView(device, &viewCI, nullptr, &swapchainImageViews[i]));
-	}
+	}*/
 
 	//Depth attatchement
 	//Spec declares either D32 or D24 to be supported. Check which.
-	std::vector<VkFormat> depthFormatList{ VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
+/*	std::vector<VkFormat> depthFormatList{ VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
 	VkFormat depthFormat{ VK_FORMAT_UNDEFINED };
 	for(VkFormat& format : depthFormatList){
 		VkFormatProperties2 formatProperties = { .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2 };
@@ -235,7 +247,7 @@ int main(int argc, char* argv[]){
 		.subresourceRange{ .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .levelCount = 1, .layerCount = 1}
 	};
 	chk(vkCreateImageView(device, &depthViewCI, nullptr, &depthImageView));
-
+*/
 	std::cout << "Image View\n";
 
 	//Load mesh (DOES NOT HANDLE BAD DATA WELL)
@@ -653,7 +665,16 @@ int main(int argc, char* argv[]){
 		if(updateSwapchain){
 			//chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
 			updateSwapchain = false;
-			chk(vkDeviceWaitIdle(device));
+			tutorialApplication.rebuildSwapchain();
+			VkFormat imageFormat = tutorialApplication.GetRenderingContext()->swapchainFormat;
+			swapchainImages = tutorialApplication.GetRenderingContext()->swapchainImages;
+			uint32_t imageCount = tutorialApplication.GetRenderingContext()->swapchainImageCount;
+			swapchainImageViews = tutorialApplication.GetRenderingContext()->swapchainImageViews;
+			swapchain = tutorialApplication.GetRenderingContext()->swapchain;
+			depthImage = tutorialApplication.GetRenderingContext()->depthImage;
+			depthImageView = tutorialApplication.GetRenderingContext()->depthImageView;
+			depthFormat = tutorialApplication.GetRenderingContext()->depthFormat;
+			/*chk(vkDeviceWaitIdle(device));
 			chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCaps));
 			swapchainCI.oldSwapchain = swapchain;
 			//swapchainCI.imageExtent = {.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y) };
@@ -677,7 +698,7 @@ int main(int argc, char* argv[]){
 					.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = 1, .layerCount = 1}
 				};
 				chk(vkCreateImageView(device, &viewCI, nullptr, &swapchainImageViews[i]));
-			}
+			}*/
 			for(auto& semaphore : renderCompleteSemaphores){
 				vkDestroySemaphore(device, semaphore, nullptr);
 			}
@@ -685,7 +706,7 @@ int main(int argc, char* argv[]){
 			for(auto& semaphore : renderCompleteSemaphores) {
 				chk(vkCreateSemaphore(device, &semaphoreCI, nullptr, &semaphore));
 			}
-			vkDestroySwapchainKHR(device, swapchainCI.oldSwapchain, nullptr);
+			/*vkDestroySwapchainKHR(device, swapchainCI.oldSwapchain, nullptr);
 			vmaDestroyImage(allocator, depthImage, depthImageAllocation);
 			vkDestroyImageView(device, depthImageView, nullptr);
 			depthImageCI.extent = {.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y), .depth = 1 };
@@ -701,7 +722,7 @@ int main(int argc, char* argv[]){
 				.format = depthFormat,
 				.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .levelCount = 1, .layerCount = 1 }
 			};
-			chk(vkCreateImageView(device, &viewCI, nullptr, &depthImageView));
+			chk(vkCreateImageView(device, &viewCI, nullptr, &depthImageView));*/
 		}
 
 		//Aquire the next image
