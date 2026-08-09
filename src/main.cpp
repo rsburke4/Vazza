@@ -147,37 +147,18 @@ int main(int argc, char* argv[]){
 	Application tutorialApplication;
 	tutorialApplication.InitializeVulkan();
 
+	//Eventually these will be abstracted <- uh oh. There's that word again
 	device = tutorialApplication.GetVulkanContext()->device;
 	instance = tutorialApplication.GetVulkanContext()->instance;
 	VkPhysicalDevice physicalDevice = tutorialApplication.GetVulkanContext()->physicalDevice;
 	VkQueue queue = tutorialApplication.GetVulkanContext()->graphicsQueue;
 	uint32_t queueFamily = tutorialApplication.GetVulkanContext()->graphicsQueueFamily;
+	allocator = tutorialApplication.GetVulkanContext()->allocator;
+	VkSurfaceKHR surface = tutorialApplication.GetVulkanContext()->surface;
+	VkSurfaceCapabilitiesKHR surfaceCaps = tutorialApplication.GetVulkanContext()->surfaceCapabilities;
+	SDL_Window *window = tutorialApplication.GetVulkanContext()->window;
+	windowSize = tutorialApplication.GetVulkanContext()->windowSize;
 
-	//Load external modules
-
-
-	//VMA Setup
-	VmaVulkanFunctions vkFunctions{
-		.vkGetInstanceProcAddr = vkGetInstanceProcAddr,
-		.vkGetDeviceProcAddr = vkGetDeviceProcAddr,
-		.vkCreateImage = vkCreateImage
-	};
-	VmaAllocatorCreateInfo allocatorCI{
-		.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
-		.physicalDevice = physicalDevice,
-		.device = device,
-		.pVulkanFunctions = &vkFunctions,
-		.instance = instance
-	};
-	chk(vmaCreateAllocator(&allocatorCI, &allocator));
-
-	//Create a window and surface to draw to
-	SDL_Window* window = SDL_CreateWindow("How to Vulkan", 1280u, 720u, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
-	assert(window);
-	chk(SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface));
-	chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
-	VkSurfaceCapabilitiesKHR surfaceCaps{};
-	chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCaps));
 
 	//Swapchain creation
 	//TODO: This is the bare minimum, and should be extended later

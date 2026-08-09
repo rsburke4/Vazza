@@ -148,9 +148,28 @@ void Application::InitializeVulkan(){
 
 	
 	//Set up VMA
+	VmaVulkanFunctions vkFunctions{
+		.vkGetInstanceProcAddr = vkGetInstanceProcAddr,
+		.vkGetDeviceProcAddr = vkGetDeviceProcAddr,
+		.vkCreateImage = vkCreateImage
+	};
+	VmaAllocatorCreateInfo allocatorCI{
+		.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
+		.physicalDevice = vulkanContext.physicalDevice,
+		.device = vulkanContext.device,
+		.pVulkanFunctions = &vkFunctions,
+		.instance = vulkanContext.instance
+	};
+	chk(vmaCreateAllocator(&allocatorCI, &vulkanContext.allocator));
 
 
 	//Open SDL Window
+	//Create a window and surface to draw to
+	vulkanContext.window = SDL_CreateWindow("How to Vulkan", 1280u, 720u, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+	assert(vulkanContext.window);
+	chk(SDL_Vulkan_CreateSurface(vulkanContext.window, vulkanContext.instance, nullptr, &vulkanContext.surface));
+	chk(SDL_GetWindowSize(vulkanContext.window, &vulkanContext.windowSize.x, &vulkanContext.windowSize.y));
+	chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkanContext.physicalDevice, vulkanContext.surface, &vulkanContext.surfaceCapabilities));
 
 
 	//Global Swapchain?

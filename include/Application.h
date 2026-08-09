@@ -9,18 +9,31 @@
 
 #include <vulkan/vulkan.h>
 #include "vk_mem_alloc.h"
+#include "SDL3/SDL.h"
+#include "SDL3/SDL_vulkan.h"
+#include "glm/glm.hpp"
 #include <string>
 #include <vector>
 #include <iostream>
 
+//Global variables for simple rendering
 struct VulkanContext{
+    //Instances and devices
     VkInstance instance{VK_NULL_HANDLE};
     VkPhysicalDevice physicalDevice{VK_NULL_HANDLE};
     VkDevice device{VK_NULL_HANDLE};
+
+    //Queues and commands
     VkQueue graphicsQueue{VK_NULL_HANDLE};
     uint32_t graphicsQueueFamily = -1;
     VkCommandPool commandPool{VK_NULL_HANDLE};
     VmaAllocator allocator{VK_NULL_HANDLE};
+
+    //Surface Related
+    VkSurfaceKHR surface{VK_NULL_HANDLE};
+    VkSurfaceCapabilitiesKHR surfaceCapabilities;
+    SDL_Window *window;
+    glm::ivec2 windowSize{};
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
 #else
