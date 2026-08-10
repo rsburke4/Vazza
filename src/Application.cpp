@@ -171,84 +171,6 @@ void Application::InitializeVulkan(){
 	chk(SDL_GetWindowSize(vulkanContext.window, &vulkanContext.windowSize.x, &vulkanContext.windowSize.y));
 	chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkanContext.physicalDevice, vulkanContext.surface, &vulkanContext.surfaceCapabilities));
 
-	//Global swapchain?
-	//TODO: This is the bare minimum, and should be extended later
-	/*VkExtent2D swapchainExtent{ surfaceCaps.currentExtent };
-	if(surfaceCaps.currentExtent.width = 0xFFFFFFFF){
-		swapchainExtent = {.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y)};
-	}
-
-	//This format is guarenteed to be supported by a graphics queue, but
-	//we can get a better one if supported
-	//This should probably be in a new function, as we will need to rebuild eventually.
-	renderingContext.swapchainFormat = VK_FORMAT_B8G8R8A8_SRGB;
-	VkSwapchainCreateInfoKHR swapchainCI{
-		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-		.surface = vulkanContext.surface,
-		.minImageCount = surfaceCaps.minImageCount,
-		.imageFormat = renderingContext.swapchainFormat,
-		.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR,
-		.imageExtent{ .width = swapchainExtent.width, .height = swapchainExtent.height },
-		.imageArrayLayers = 1,
-		.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-		.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
-		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-		.presentMode = VK_PRESENT_MODE_FIFO_KHR
-	};
-	chk(vkCreateSwapchainKHR(vulkanContext.device, &swapchainCI, nullptr, &renderingContext.swapchain));
-	uint32_t renderingContext.swapchainImageCount{ 0 };
-	chk(vkGetSwapchainImagesKHR(vulkanContext.device, renderingContext.swapchain, &renderingContext.swapchainImageCount, nullptr));
-	swapchainImages.resize(renderingContext.ImageCount);
-	chk(vkGetSwapchainImagesKHR(vulkanContext.device, renderingContext.swapchain, &renderingContext.swapchainImageCount, renderingContext.swapchainImages.data()));
-	swapchainImageViews.resize(renderingContext.ImageCount);
-	for(auto i = 0; i < renderingContext.swapchainImageCount; i++){
-		VkImageViewCreateInfo viewCI = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		.image = renderingContext.swapchainImages[i],
-		.viewType = VK_IMAGE_VIEW_TYPE_2D,
-		.format = renderingContext.swapchainFormat,
-		.subresourceRange{.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = 1, .layerCount = 1}
-		};
-		chk(vkCreateImageView(vulkanContext.device, &viewCI, nullptr, &redneringContext.swapchainImageViews[i]));
-	}
-
-	//Create depth attatchment
-	std::vector<VkFormat> depthFormatList{ VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
-	VkFormat depthFormat{ VK_FORMAT_UNDEFINED };
-	for(VkFormat& format : depthFormatList){
-		VkFormatProperties2 formatProperties = { .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2 };
-		vkGetPhysicalDeviceFormatProperties2(physicalDevice, format, &formatProperties);
-		if(formatProperties.formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT){
-			depthFormat = format;
-			break;
-		}
-	}
-	VkImageCreateInfo depthImageCI{
-		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-		.imageType = VK_IMAGE_TYPE_2D,
-		.format = depthFormat,
-		.extent{.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y), .depth = 1},
-		.mipLevels = 1,
-		.arrayLayers = 1,
-		.samples = VK_SAMPLE_COUNT_1_BIT,
-		.tiling = VK_IMAGE_TILING_OPTIMAL,
-		.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
-	};
-	VmaAllocationCreateInfo allocCI{
-		.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-		.usage = VMA_MEMORY_USAGE_AUTO
-	};
-	chk(vmaCreateImage(allocator, &depthImageCI, &allocCI, &depthImage, &depthImageAllocation, nullptr));
-	VkImageViewCreateInfo depthViewCI{
-		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		.image = depthImage,
-		.viewType = VK_IMAGE_VIEW_TYPE_2D,
-		.format = depthFormat,
-		.subresourceRange{ .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .levelCount = 1, .layerCount = 1}
-	};
-	chk(vkCreateImageView(device, &depthViewCI, nullptr, &depthImageView));*/
-
 	rebuildSwapchain();
 }
 
@@ -257,7 +179,9 @@ void Application::rebuildSwapchain(){
 	chk(vkDeviceWaitIdle(vulkanContext.device));
 	//Check if images and views are valid. Destroy if so.
 	if(renderingContext.depthImageView != VK_NULL_HANDLE) vkDestroyImageView(vulkanContext.device, renderingContext.depthImageView, nullptr);
-	if(renderingContext.depthImage != VK_NULL_HANDLE) vkDestroyImage(vulkanContext.device, renderingContext.depthImage, nullptr);
+	if(renderingContext.depthImage != VK_NULL_HANDLE && renderingContext.depthImageAllocation != VK_NULL_HANDLE){
+		vmaDestroyImage(vulkanContext.allocator, renderingContext.depthImage, renderingContext.depthImageAllocation);
+	}
 	for(uint32_t i = 0; i < renderingContext.swapchainImageCount; i++){
 		if(renderingContext.swapchainImageViews[i] != VK_NULL_HANDLE){
 			vkDestroyImageView(vulkanContext.device, renderingContext.swapchainImageViews[i], nullptr);
@@ -269,9 +193,15 @@ void Application::rebuildSwapchain(){
 	//This should probably be in a new function, as we will need to rebuild eventually.
 	//Swapchain creation
 	//TODO: This is the bare minimum, and should be extended later
+	chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkanContext.physicalDevice, vulkanContext.surface, &vulkanContext.surfaceCapabilities));
 	renderingContext.swapchainExtent = vulkanContext.surfaceCapabilities.currentExtent;
 	if(vulkanContext.surfaceCapabilities.currentExtent.width == 0xFFFFFFFF){
 		renderingContext.swapchainExtent = {.width = static_cast<uint32_t>(vulkanContext.windowSize.x), .height = static_cast<uint32_t>(vulkanContext.windowSize.y)};
+	}
+	else{
+			vulkanContext.windowSize.x = vulkanContext.surfaceCapabilities.currentExtent.width;
+			vulkanContext.windowSize.y = vulkanContext.surfaceCapabilities.currentExtent.height;
+			renderingContext.swapchainExtent = {.width = static_cast<uint32_t>(vulkanContext.windowSize.x), .height = static_cast<uint32_t>(vulkanContext.windowSize.y)};
 	}
 
 	renderingContext.swapchainFormat = VK_FORMAT_B8G8R8A8_SRGB;
@@ -288,11 +218,10 @@ void Application::rebuildSwapchain(){
 		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
 		.presentMode = VK_PRESENT_MODE_FIFO_KHR
 	};
-	if(renderingContext.swapchain != VK_NULL_HANDLE){
-		swapchainCI.oldSwapchain = renderingContext.swapchain;
-		vkDestroySwapchainKHR(vulkanContext.device, renderingContext.swapchain, nullptr);
-	}
+
+	if(renderingContext.swapchain != VK_NULL_HANDLE) swapchainCI.oldSwapchain = renderingContext.swapchain;
 	chk(vkCreateSwapchainKHR(vulkanContext.device, &swapchainCI, nullptr, &renderingContext.swapchain));
+	if(swapchainCI.oldSwapchain != VK_NULL_HANDLE) vkDestroySwapchainKHR(vulkanContext.device, swapchainCI.oldSwapchain, nullptr);
 	renderingContext.swapchainImageCount = 0;
 	chk(vkGetSwapchainImagesKHR(vulkanContext.device, renderingContext.swapchain, &renderingContext.swapchainImageCount, nullptr));
 	renderingContext.swapchainImages.resize(renderingContext.swapchainImageCount);

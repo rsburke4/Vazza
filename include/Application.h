@@ -62,7 +62,7 @@ struct RenderingContext{
     VkFormat depthFormat{VK_FORMAT_UNDEFINED};
     VkImage depthImage{VK_NULL_HANDLE};
     VkImageView depthImageView{VK_NULL_HANDLE};
-    VmaAllocation depthImageAllocation;
+    VmaAllocation depthImageAllocation{VK_NULL_HANDLE};
 };
 
 class Application

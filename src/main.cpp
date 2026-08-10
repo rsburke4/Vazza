@@ -170,84 +170,11 @@ int main(int argc, char* argv[]){
 	//Swapchain creation
 	//TODO: This is the bare minimum, and should be extended later
 	VkExtent2D swapchainExtent = tutorialApplication.GetRenderingContext()->swapchainExtent;
-	/*VkExtent2D swapchainExtent{ surfaceCaps.currentExtent };
-	if(surfaceCaps.currentExtent.width == 0xFFFFFFFF){
-		swapchainExtent = {.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y)};
-	}*/
 
 	depthImage = tutorialApplication.GetRenderingContext()->depthImage;
 	depthImageView = tutorialApplication.GetRenderingContext()->depthImageView;
 	VkFormat depthFormat = tutorialApplication.GetRenderingContext()->depthFormat;
 
-	/*const VkFormat imageFormat{ VK_FORMAT_B8G8R8A8_SRGB };
-	VkSwapchainCreateInfoKHR swapchainCI{
-		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-		.surface = surface,
-		.minImageCount = surfaceCaps.minImageCount,
-		.imageFormat = imageFormat,
-		.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR,
-		.imageExtent{ .width = swapchainExtent.width, .height = swapchainExtent.height },
-		.imageArrayLayers = 1,
-		.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-		.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
-		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-		.presentMode = VK_PRESENT_MODE_FIFO_KHR
-	};
-	chk(vkCreateSwapchainKHR(device, &swapchainCI, nullptr, &swapchain));
-	uint32_t imageCount{ 0 };
-	chk(vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr));
-	swapchainImages.resize(imageCount);
-	chk(vkGetSwapchainImagesKHR(device, swapchain, &imageCount, swapchainImages.data()));
-	swapchainImageViews.resize(imageCount);
-	for(auto i = 0; i < imageCount; i++){
-		VkImageViewCreateInfo viewCI = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		.image = swapchainImages[i],
-		.viewType = VK_IMAGE_VIEW_TYPE_2D,
-		.format = imageFormat,
-		.subresourceRange{.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = 1, .layerCount = 1}
-		};
-		chk(vkCreateImageView(device, &viewCI, nullptr, &swapchainImageViews[i]));
-	}*/
-
-	//Depth attatchement
-	//Spec declares either D32 or D24 to be supported. Check which.
-/*	std::vector<VkFormat> depthFormatList{ VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT };
-	VkFormat depthFormat{ VK_FORMAT_UNDEFINED };
-	for(VkFormat& format : depthFormatList){
-		VkFormatProperties2 formatProperties = { .sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2 };
-		vkGetPhysicalDeviceFormatProperties2(physicalDevice, format, &formatProperties);
-		if(formatProperties.formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT){
-			depthFormat = format;
-			break;
-		}
-	}
-	VkImageCreateInfo depthImageCI{
-		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-		.imageType = VK_IMAGE_TYPE_2D,
-		.format = depthFormat,
-		.extent{.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y), .depth = 1},
-		.mipLevels = 1,
-		.arrayLayers = 1,
-		.samples = VK_SAMPLE_COUNT_1_BIT,
-		.tiling = VK_IMAGE_TILING_OPTIMAL,
-		.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
-	};
-	VmaAllocationCreateInfo allocCI{
-		.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-		.usage = VMA_MEMORY_USAGE_AUTO
-	};
-	chk(vmaCreateImage(allocator, &depthImageCI, &allocCI, &depthImage, &depthImageAllocation, nullptr));
-	VkImageViewCreateInfo depthViewCI{
-		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		.image = depthImage,
-		.viewType = VK_IMAGE_VIEW_TYPE_2D,
-		.format = depthFormat,
-		.subresourceRange{ .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .levelCount = 1, .layerCount = 1}
-	};
-	chk(vkCreateImageView(device, &depthViewCI, nullptr, &depthImageView));
-*/
 	std::cout << "Image View\n";
 
 	//Load mesh (DOES NOT HANDLE BAD DATA WELL)
@@ -671,34 +598,14 @@ int main(int argc, char* argv[]){
 			uint32_t imageCount = tutorialApplication.GetRenderingContext()->swapchainImageCount;
 			swapchainImageViews = tutorialApplication.GetRenderingContext()->swapchainImageViews;
 			swapchain = tutorialApplication.GetRenderingContext()->swapchain;
+			swapchainExtent = tutorialApplication.GetRenderingContext()->swapchainExtent;
+			windowSize = tutorialApplication.GetVulkanContext()->windowSize;
+			
 			depthImage = tutorialApplication.GetRenderingContext()->depthImage;
 			depthImageView = tutorialApplication.GetRenderingContext()->depthImageView;
 			depthFormat = tutorialApplication.GetRenderingContext()->depthFormat;
-			/*chk(vkDeviceWaitIdle(device));
-			chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCaps));
-			swapchainCI.oldSwapchain = swapchain;
-			//swapchainCI.imageExtent = {.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y) };
-			swapchainCI.imageExtent = surfaceCaps.currentExtent;
-			windowSize.x = surfaceCaps.currentExtent.width;
-			windowSize.y = surfaceCaps.currentExtent.height;
-			chk(vkCreateSwapchainKHR(device, &swapchainCI, nullptr, &swapchain));
-			for(auto i = 0; i < imageCount; i++){
-				vkDestroyImageView(device, swapchainImageViews[i], nullptr);
-			}
-			chk(vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr));
-			swapchainImages.resize(imageCount);
-			chk(vkGetSwapchainImagesKHR(device, swapchain, &imageCount, swapchainImages.data()));
-			swapchainImageViews.resize(imageCount);
-			for(auto i = 0; i < imageCount; i++){
-				VkImageViewCreateInfo viewCI{
-					.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-					.image = swapchainImages[i],
-					.viewType = VK_IMAGE_VIEW_TYPE_2D,
-					.format = imageFormat,
-					.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = 1, .layerCount = 1}
-				};
-				chk(vkCreateImageView(device, &viewCI, nullptr, &swapchainImageViews[i]));
-			}*/
+			depthImageAllocation = tutorialApplication.GetRenderingContext()->depthImageAllocation;
+
 			for(auto& semaphore : renderCompleteSemaphores){
 				vkDestroySemaphore(device, semaphore, nullptr);
 			}
@@ -706,23 +613,6 @@ int main(int argc, char* argv[]){
 			for(auto& semaphore : renderCompleteSemaphores) {
 				chk(vkCreateSemaphore(device, &semaphoreCI, nullptr, &semaphore));
 			}
-			/*vkDestroySwapchainKHR(device, swapchainCI.oldSwapchain, nullptr);
-			vmaDestroyImage(allocator, depthImage, depthImageAllocation);
-			vkDestroyImageView(device, depthImageView, nullptr);
-			depthImageCI.extent = {.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y), .depth = 1 };
-			VmaAllocationCreateInfo allocCI{
-				.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-				.usage = VMA_MEMORY_USAGE_AUTO
-			};
-			chk(vmaCreateImage(allocator, &depthImageCI, &allocCI, &depthImage, &depthImageAllocation, nullptr));
-			VkImageViewCreateInfo viewCI{
-				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-				.image = depthImage,
-				.viewType = VK_IMAGE_VIEW_TYPE_2D,
-				.format = depthFormat,
-				.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .levelCount = 1, .layerCount = 1 }
-			};
-			chk(vkCreateImageView(device, &viewCI, nullptr, &depthImageView));*/
 		}
 
 		//Aquire the next image
@@ -918,7 +808,7 @@ int main(int argc, char* argv[]){
 	for(auto i = 0; i < renderCompleteSemaphores.size(); i++){
 		vkDestroySemaphore(device, renderCompleteSemaphores[i], nullptr);
 	}
-	vmaDestroyImage(allocator, depthImage, depthImageAllocation);
+	vmaDestroyImage(tutorialApplication.GetVulkanContext()->allocator, tutorialApplication.GetRenderingContext()->depthImage, tutorialApplication.GetRenderingContext()->depthImageAllocation);
 	vkDestroyImageView(device, depthImageView, nullptr);
 	for(auto i = 0; i < swapchainImageViews.size(); i++){
 		vkDestroyImageView(device, swapchainImageViews[i], nullptr);
