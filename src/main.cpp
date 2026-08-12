@@ -118,7 +118,7 @@ bool checkValidationLayerSupport(){
 	return true;
 }
 */
-static inline void chk(VkResult result){
+/*static inline void chk(VkResult result){
 	if(result != VK_SUCCESS){
 		std::cerr << "Vulkan call returned an error (" << result << ")\n";
 		exit(result);
@@ -141,39 +141,38 @@ static inline void chkSwapchain(VkResult result){
 		std::cerr << "Vulkan swapchain call returned an error (" << result << ")\n";
 		exit(result);
 	}
-}
+}*/
 
 int main(int argc, char* argv[]){
-	Application tutorialApplication;
-	tutorialApplication.InitializeVulkan();
+	Application *tutorialApplication = Application::GetInstance();
 
 	//Eventually these will be abstracted <- uh oh. There's that word again
-	device = tutorialApplication.GetVulkanContext()->device;
-	instance = tutorialApplication.GetVulkanContext()->instance;
-	VkPhysicalDevice physicalDevice = tutorialApplication.GetVulkanContext()->physicalDevice;
-	VkQueue queue = tutorialApplication.GetVulkanContext()->graphicsQueue;
-	uint32_t queueFamily = tutorialApplication.GetVulkanContext()->graphicsQueueFamily;
-	allocator = tutorialApplication.GetVulkanContext()->allocator;
-	VkSurfaceKHR surface = tutorialApplication.GetVulkanContext()->surface;
-	VkSurfaceCapabilitiesKHR surfaceCaps = tutorialApplication.GetVulkanContext()->surfaceCapabilities;
-	SDL_Window *window = tutorialApplication.GetVulkanContext()->window;
-	windowSize = tutorialApplication.GetVulkanContext()->windowSize;
+	device = tutorialApplication->GetVulkanContext()->device;
+	instance = tutorialApplication->GetVulkanContext()->instance;
+	VkPhysicalDevice physicalDevice = tutorialApplication->GetVulkanContext()->physicalDevice;
+	VkQueue queue = tutorialApplication->GetVulkanContext()->graphicsQueue;
+	uint32_t queueFamily = tutorialApplication->GetVulkanContext()->graphicsQueueFamily;
+	allocator = tutorialApplication->GetVulkanContext()->allocator;
+	VkSurfaceKHR surface = tutorialApplication->GetVulkanContext()->surface;
+	VkSurfaceCapabilitiesKHR surfaceCaps = tutorialApplication->GetVulkanContext()->surfaceCapabilities;
+	SDL_Window *window = tutorialApplication->GetVulkanContext()->window;
+	windowSize = tutorialApplication->GetVulkanContext()->windowSize;
 
 	//Swapchain stuff
-	VkFormat imageFormat = tutorialApplication.GetRenderingContext()->swapchainFormat;
-	swapchainImages = tutorialApplication.GetRenderingContext()->swapchainImages;
-	uint32_t imageCount = tutorialApplication.GetRenderingContext()->swapchainImageCount;
-	swapchainImageViews = tutorialApplication.GetRenderingContext()->swapchainImageViews;
-	swapchain = tutorialApplication.GetRenderingContext()->swapchain;
+	VkFormat imageFormat = tutorialApplication->GetRenderingContext()->swapchainFormat;
+	swapchainImages = tutorialApplication->GetRenderingContext()->swapchainImages;
+	uint32_t imageCount = tutorialApplication->GetRenderingContext()->swapchainImageCount;
+	swapchainImageViews = tutorialApplication->GetRenderingContext()->swapchainImageViews;
+	swapchain = tutorialApplication->GetRenderingContext()->swapchain;
 
 
 	//Swapchain creation
 	//TODO: This is the bare minimum, and should be extended later
-	VkExtent2D swapchainExtent = tutorialApplication.GetRenderingContext()->swapchainExtent;
+	VkExtent2D swapchainExtent = tutorialApplication->GetRenderingContext()->swapchainExtent;
 
-	depthImage = tutorialApplication.GetRenderingContext()->depthImage;
-	depthImageView = tutorialApplication.GetRenderingContext()->depthImageView;
-	VkFormat depthFormat = tutorialApplication.GetRenderingContext()->depthFormat;
+	depthImage = tutorialApplication->GetRenderingContext()->depthImage;
+	depthImageView = tutorialApplication->GetRenderingContext()->depthImageView;
+	VkFormat depthFormat = tutorialApplication->GetRenderingContext()->depthFormat;
 
 	std::cout << "Image View\n";
 
@@ -592,19 +591,19 @@ int main(int argc, char* argv[]){
 		if(updateSwapchain){
 			//chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
 			updateSwapchain = false;
-			tutorialApplication.rebuildSwapchain();
-			VkFormat imageFormat = tutorialApplication.GetRenderingContext()->swapchainFormat;
-			swapchainImages = tutorialApplication.GetRenderingContext()->swapchainImages;
-			uint32_t imageCount = tutorialApplication.GetRenderingContext()->swapchainImageCount;
-			swapchainImageViews = tutorialApplication.GetRenderingContext()->swapchainImageViews;
-			swapchain = tutorialApplication.GetRenderingContext()->swapchain;
-			swapchainExtent = tutorialApplication.GetRenderingContext()->swapchainExtent;
-			windowSize = tutorialApplication.GetVulkanContext()->windowSize;
+			tutorialApplication->rebuildSwapchain();
+			VkFormat imageFormat = tutorialApplication->GetRenderingContext()->swapchainFormat;
+			swapchainImages = tutorialApplication->GetRenderingContext()->swapchainImages;
+			uint32_t imageCount = tutorialApplication->GetRenderingContext()->swapchainImageCount;
+			swapchainImageViews = tutorialApplication->GetRenderingContext()->swapchainImageViews;
+			swapchain = tutorialApplication->GetRenderingContext()->swapchain;
+			swapchainExtent = tutorialApplication->GetRenderingContext()->swapchainExtent;
+			windowSize = tutorialApplication->GetVulkanContext()->windowSize;
 			
-			depthImage = tutorialApplication.GetRenderingContext()->depthImage;
-			depthImageView = tutorialApplication.GetRenderingContext()->depthImageView;
-			depthFormat = tutorialApplication.GetRenderingContext()->depthFormat;
-			depthImageAllocation = tutorialApplication.GetRenderingContext()->depthImageAllocation;
+			depthImage = tutorialApplication->GetRenderingContext()->depthImage;
+			depthImageView = tutorialApplication->GetRenderingContext()->depthImageView;
+			depthFormat = tutorialApplication->GetRenderingContext()->depthFormat;
+			depthImageAllocation = tutorialApplication->GetRenderingContext()->depthImageAllocation;
 
 			for(auto& semaphore : renderCompleteSemaphores){
 				vkDestroySemaphore(device, semaphore, nullptr);
@@ -808,7 +807,7 @@ int main(int argc, char* argv[]){
 	for(auto i = 0; i < renderCompleteSemaphores.size(); i++){
 		vkDestroySemaphore(device, renderCompleteSemaphores[i], nullptr);
 	}
-	vmaDestroyImage(tutorialApplication.GetVulkanContext()->allocator, tutorialApplication.GetRenderingContext()->depthImage, tutorialApplication.GetRenderingContext()->depthImageAllocation);
+	vmaDestroyImage(tutorialApplication->GetVulkanContext()->allocator, tutorialApplication->GetRenderingContext()->depthImage, tutorialApplication->GetRenderingContext()->depthImageAllocation);
 	vkDestroyImageView(device, depthImageView, nullptr);
 	for(auto i = 0; i < swapchainImageViews.size(); i++){
 		vkDestroyImageView(device, swapchainImageViews[i], nullptr);

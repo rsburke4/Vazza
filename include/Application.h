@@ -65,15 +65,8 @@ struct RenderingContext{
     VmaAllocation depthImageAllocation{VK_NULL_HANDLE};
 };
 
-class Application
-{
-  public:
-    void InitializeVulkan();
-    void DrawFrame();
-
-
     //TODO: Make static or move to global class
-    void chk(VkResult result)
+static inline void chk(VkResult result)
     {
         if (result != VK_SUCCESS)
         {
@@ -82,7 +75,7 @@ class Application
         }
     }
 
-    void chk(bool result)
+static inline void chk(bool result)
     {
         if (!result)
         {
@@ -91,25 +84,26 @@ class Application
         }
     }
 
-    void chkSwapchain(VkResult result)
-    {
-        if (result < VK_SUCCESS)
-        {
-            if (result == VK_ERROR_OUT_OF_DATE_KHR)
-            {
-                renderingContext.updateSwapchain = true;
-                return;
-            }
-            std::cerr << "Vulkan swapchain call returned an error (" << result << ")\n";
-            exit(result);
-        }
-    }
+class Application
+{
+  public:
+    void InitializeVulkan();
+    void DrawFrame();
+
+    //Singleton pattern
+    Application(){}
+    ~Application(){}
+
+    //No copies or assigns
+    Application(Application &other) = delete;
+    void operator=(const Application&) = delete;
+    static Application *GetInstance();
 
     const VulkanContext* GetVulkanContext() const{
         return &vulkanContext;
     }
 
-    const RenderingContext* GetRenderingContext() const{
+    RenderingContext* GetRenderingContext(){
         return &renderingContext;
     }
 
@@ -121,6 +115,23 @@ class Application
     private:
         VulkanContext vulkanContext;
         RenderingContext renderingContext;
+    
+    protected:
+        static Application *singleton;
 };
+
+static inline void chkSwapchain(VkResult result)
+    {
+        if (result < VK_SUCCESS)
+        {
+            if (result == VK_ERROR_OUT_OF_DATE_KHR)
+            {
+                Application::GetInstance()->GetRenderingContext()->updateSwapchain = true;
+                return;
+            }
+            std::cerr << "Vulkan swapchain call returned an error (" << result << ")\n";
+            exit(result);
+        }
+    }
 
 #endif

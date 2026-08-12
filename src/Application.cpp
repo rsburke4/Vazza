@@ -28,6 +28,15 @@ bool checkValidationLayerSupport(){
 	return true;
 }
 
+Application* Application::singleton = nullptr;
+Application *Application::GetInstance(){
+	if(singleton == nullptr){
+		singleton = new Application();
+		singleton->InitializeVulkan();
+	}
+	return singleton;
+}
+
 void Application::InitializeVulkan(){
 	chk(SDL_Init(SDL_INIT_VIDEO));
 	chk(SDL_Vulkan_LoadLibrary(NULL));
@@ -62,7 +71,6 @@ void Application::InitializeVulkan(){
 	}
     chk(vkCreateInstance(&instanceCI, nullptr, &vulkanContext.instance));
 	volkLoadInstance(vulkanContext.instance);
-
 
 	//Set up physical device
 	//Select Device (First device in list by default)
@@ -146,7 +154,6 @@ void Application::InitializeVulkan(){
 	chk(vkCreateDevice(vulkanContext.physicalDevice, &deviceCI, nullptr, &vulkanContext.device));
 	vkGetDeviceQueue(vulkanContext.device, vulkanContext.graphicsQueueFamily, 0, &vulkanContext.graphicsQueue);
 
-	
 	//Set up VMA
 	VmaVulkanFunctions vkFunctions{
 		.vkGetInstanceProcAddr = vkGetInstanceProcAddr,
@@ -162,7 +169,6 @@ void Application::InitializeVulkan(){
 	};
 	chk(vmaCreateAllocator(&allocatorCI, &vulkanContext.allocator));
 
-
 	//Open SDL Window
 	//Create a window and surface to draw to
 	vulkanContext.window = SDL_CreateWindow(name.c_str(), 1280u, 720u, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
@@ -173,7 +179,6 @@ void Application::InitializeVulkan(){
 
 	rebuildSwapchain();
 }
-
 
 void Application::rebuildSwapchain(){
 	chk(vkDeviceWaitIdle(vulkanContext.device));
