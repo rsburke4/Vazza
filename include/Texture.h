@@ -13,16 +13,19 @@ class Texture : public Resource{
         VkDeviceSize offset;    //Offset within the memory allocation for this texture
         VkImageView imageView;  //Shader-accessible view into the image
         VkSampler sampler;      //Sampling configuration
+        VkFormat format;        //Format of the image
+        VmaAllocation allocation;
 
     //All the normal information about the image
         int width = 0;
         int height = 0;
         int channels = 0;
         int layers = 0; //Will usually be 1?
+        int levels = 0;
 
-        unsigned char* LoadImageData(const std::string& filePath, int* width, int* height, int* channels, unsigned int* outVkFormat);
+        unsigned char* LoadImageData(const std::string& filePath);
         void FreeImageData(unsigned char* data);
-        void CreateVulkanImage(unsigned char* data, int width, int height, int channels, unsigned int inVkFormat);
+        void CreateVulkanImage(unsigned char* data);
         VkDevice GetDevice();
 
     public:
