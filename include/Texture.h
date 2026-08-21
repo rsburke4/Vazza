@@ -4,6 +4,7 @@
 #include "Resource.h"
 #include "Application.h"
 #include <vulkan/vulkan.h>
+#include <filesystem>
 
 class Texture : public Resource{
     //All the good stuff for loading images
@@ -26,7 +27,6 @@ class Texture : public Resource{
         unsigned char* LoadImageData(const std::string& filePath);
         void FreeImageData(unsigned char* data);
         void CreateVulkanImage(unsigned char* data);
-        VkDevice GetDevice();
 
     public:
         explicit Texture(const std::string& id) : Resource(id) {}
@@ -41,6 +41,7 @@ class Texture : public Resource{
         VkImage GetImage() const {return image;}
         VkImageView GetImageView() const { return imageView;}
         VkSampler GetSampler() const { return sampler;} 
+        bool setTextureFile(std::filesystem::path filename);
 };
 
 #endif

@@ -61,6 +61,7 @@ class ResourceManager
     };
     std::unordered_map<std::type_index, std::unordered_map<std::string, ResourceData>> refCounts;
 
+    //TODO: Remove autos where possible
     template<typename T>
     ResourceHandle<T> Load(const std::string &resourceId){
         static_assert(std::is_base_of<Resource, T>::value, "T must derive from Resource");

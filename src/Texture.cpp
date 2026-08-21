@@ -6,13 +6,17 @@
 #include <stdexcept>
 #include <cstring>
 #include <vulkan/vulkan.h>
+#include <filesystem>
+#include <png.h>
+#include <jpeglib.h>
+#include <setjmp.h>
+
 
 bool Texture::doLoad(){
     //Work with all ktx internally
     std::string filePath = "textures/" + GetId() + ".ktx";
 
     //Load raw image data from disk with format detection
-    unsigned int imgFormat = 0; //Should we save this internally?
     unsigned char* data = LoadImageData(filePath);
     if(!data){
         return false; //Failed to load image
@@ -24,6 +28,39 @@ bool Texture::doLoad(){
 
     return true;
 }
+
+/*
+//TODO::Replace these asserts with cleaner macro
+bool Texture::setTextureFile(std::filesystem::path filename){
+    struct stat info;
+    //Check if .textureCache exists in current project folder
+    //Create if it doesn't.
+    if( !std::filesystem::exists("./.textureCache")){
+        std::cout << "Cannot access .textureCache directory.\n";
+        std::cout << "Attempting to create cache...\n";
+        assert(std::filesystem::create_directory(".textureCache") && ".textureCache could not be created\n");
+        std::cout << ".textureCache created successfully.\n";
+    }
+
+    //Check to make sure that the (possibly newly created)
+    //directory is in fact a directory
+    assert( std::filesystem::is_directory(".textureCache") && ".textureCache exists, but is not a directory\n");
+
+    //textureCache found. Proceed
+    std::string fileBase = filename.filename().stem();
+    if( !std::filesystem::exists("./.textureCache/" + fileBase + ".ktx") &&
+        !std::filesystem::exists("./.textureCache/" + fileBase + "KTX")){
+            //File does not exist. Create here.
+        }
+        //Texture does not exist. Create.
+    if( std::filesystem::exists())
+        //Texture exists (capitol letters). Use.
+    if( std::filesystem::exists())
+        //Texture exists (lower-case letters) Use.
+    else{
+        //Texture does not exist and was not successfully created
+    }
+}*/
 
 bool Texture::doUnload(){
     //Only perform cleanup is resource is loaded
@@ -131,9 +168,4 @@ void Texture::CreateVulkanImage(unsigned char* data){
         };
         chk(vkCreateSampler(appInstance->GetVulkanContext()->device, &samplerCI, nullptr, &sampler));
     return;
-}
-
-VkDevice Texture::GetDevice(){
-    VkDevice notRealDevice;
-    return notRealDevice;
 }
