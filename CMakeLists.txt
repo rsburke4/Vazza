@@ -63,6 +63,17 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE include)
 #add_dependencies(${CMAKE_PROJECT_NAME} SDL)
 add_dependencies(${CMAKE_PROJECT_NAME} volk)
 add_dependencies(${CMAKE_PROJECT_NAME} tinyobjloader)
+
+# Disable command-line tools and applications
+set(KTX_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+# Disable tests to speed up compile time
+set(KTX_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+# Disable building shared libraries (if you only want static libraries)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+# Enable Basis Universal compression support (highly recommended)
+set(KTX_FEATURE_BASISU ON CACHE BOOL "" FORCE)
+# Disable the large ASTC encoder if you do not use ASTC format
+set(KTX_FEATURE_ASTC ON CACHE BOOL "" FORCE)
 add_dependencies(${CMAKE_PROJECT_NAME} ktx)
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE

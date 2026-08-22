@@ -16,20 +16,21 @@ class Texture : public Resource{
         VkSampler sampler;      //Sampling configuration
         VkFormat format;        //Format of the image
         VmaAllocation allocation;
+        std::filesystem::path filePath;
+
 
     //All the normal information about the image
         int width = 0;
         int height = 0;
-        int channels = 0;
         int layers = 0; //Will usually be 1?
         int levels = 0;
 
-        unsigned char* LoadImageData(const std::string& filePath);
+        unsigned char* LoadImageData();
         void FreeImageData(unsigned char* data);
         void CreateVulkanImage(unsigned char* data);
 
     public:
-        explicit Texture(const std::string& id) : Resource(id) {}
+        explicit Texture(const std::string& id, std::filesystem::path filename) : Resource(id) {}
 
         ~Texture() override{
             Unload();
@@ -41,7 +42,6 @@ class Texture : public Resource{
         VkImage GetImage() const {return image;}
         VkImageView GetImageView() const { return imageView;}
         VkSampler GetSampler() const { return sampler;} 
-        bool setTextureFile(std::filesystem::path filename);
 };
 
 #endif

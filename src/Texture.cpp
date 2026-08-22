@@ -7,66 +7,29 @@
 #include <cstring>
 #include <vulkan/vulkan.h>
 #include <filesystem>
-#include <png.h>
-#include <jpeglib.h>
-#include <setjmp.h>
 
 
 bool Texture::doLoad(){
     //Work with all ktx internally
-    std::string filePath = "textures/" + GetId() + ".ktx";
 
     //Load raw image data from disk with format detection
-    unsigned char* data = LoadImageData(filePath);
+    unsigned char* data = LoadImageData();
     if(!data){
         return false; //Failed to load image
     }
     //Transform raw pixel data into Vulkan GPU resources
-    CreateVulkanImage(data, width, height, channels, levels, layers, imgFormat);
+    CreateVulkanImage(data);
     //Clean up temporary CPU memory to prevent leaks
     FreeImageData(data);
 
     return true;
 }
 
-/*
-//TODO::Replace these asserts with cleaner macro
-bool Texture::setTextureFile(std::filesystem::path filename){
-    struct stat info;
-    //Check if .textureCache exists in current project folder
-    //Create if it doesn't.
-    if( !std::filesystem::exists("./.textureCache")){
-        std::cout << "Cannot access .textureCache directory.\n";
-        std::cout << "Attempting to create cache...\n";
-        assert(std::filesystem::create_directory(".textureCache") && ".textureCache could not be created\n");
-        std::cout << ".textureCache created successfully.\n";
-    }
-
-    //Check to make sure that the (possibly newly created)
-    //directory is in fact a directory
-    assert( std::filesystem::is_directory(".textureCache") && ".textureCache exists, but is not a directory\n");
-
-    //textureCache found. Proceed
-    std::string fileBase = filename.filename().stem();
-    if( !std::filesystem::exists("./.textureCache/" + fileBase + ".ktx") &&
-        !std::filesystem::exists("./.textureCache/" + fileBase + "KTX")){
-            //File does not exist. Create here.
-        }
-        //Texture does not exist. Create.
-    if( std::filesystem::exists())
-        //Texture exists (capitol letters). Use.
-    if( std::filesystem::exists())
-        //Texture exists (lower-case letters) Use.
-    else{
-        //Texture does not exist and was not successfully created
-    }
-}*/
-
 bool Texture::doUnload(){
     //Only perform cleanup is resource is loaded
     if(IsLoaded()){
         //Get the device handle for resource destruction
-        VkDevice device = Application::GetInstance->GetVulkanContext()->device;
+        VkDevice device = Application::GetInstance()->GetVulkanContext()->device;
 
         //Destroy GPU objects in reverse creation order
         //This ordering prevents use-after-free errors in GPU drivers
@@ -81,7 +44,7 @@ bool Texture::doUnload(){
 }
 
 //TODO: Return format type as well?
-unsigned char* Texture::LoadImageData(const std::string& filePath){
+unsigned char* Texture::LoadImageData(){
     ktxTexture* tempTexture{nullptr};
     KTX_error_code err = ktxTexture_CreateFromNamedFile(filePath.c_str(), KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &tempTexture);
     if(err != KTX_SUCCESS){
@@ -106,7 +69,6 @@ unsigned char* Texture::LoadImageData(const std::string& filePath){
     ktx_uint8_t* internalPtr = ktxTexture_GetData(tempTexture);
     width = tempTexture->baseWidth;
     height = tempTexture->baseHeight;
-    channels = tempTexture->channels; // <- Lets hope
     levels = tempTexture->numLevels;
     layers = tempTexture->numLayers;
     format = ktxTexture_GetVkFormat(tempTexture);
@@ -126,12 +88,14 @@ void Texture::FreeImageData(unsigned char* data){
 void Texture::CreateVulkanImage(unsigned char* data){
         // Implementation to create Vulkan image, allocate memory, and upload data
         Application *appInstance = Application::GetInstance();
+        VkDevice device = appInstance->GetVulkanContext()->device;
 
         //Create destination image
         VkImageCreateInfo imageCI = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .pNext = nullptr,
-            .imageType = format,
+            .imageType = VK_IMAGE_TYPE_2D,
+            .format = format,
             .extent = {.width = width, .height = height, .depth = 1},
             .mipLevels = levels,
             .arrayLayers = layers, //Maybe? 1?
@@ -151,10 +115,10 @@ void Texture::CreateVulkanImage(unsigned char* data){
             .pNext = nullptr,
             .image = image,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = inVkFormat,
+            .format = format,
             .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = levels, .layerCount = layers}
         };
-        chk(vkCreateImageView(appInstance->GetVulkanContext()->device, &imageViewCI, nullptr, &imageView));
+        chk(vkCreateImageView(device, &imageViewCI, nullptr, &imageView));
         // - Sampler creation with appropriate filtering settings
         //This should be something we can set later on.
         VkSamplerCreateInfo samplerCI{
@@ -166,6 +130,32 @@ void Texture::CreateVulkanImage(unsigned char* data){
 			.maxAnisotropy = 8.0f, //Widely supported constant
 			.maxLod = (float)levels
         };
-        chk(vkCreateSampler(appInstance->GetVulkanContext()->device, &samplerCI, nullptr, &sampler));
+        chk(vkCreateSampler(device, &samplerCI, nullptr, &sampler));
+
+        //Create command buffer to move image data to VkImage on GPU
+        VkCommandPool commandPool;
+        VkCommandBuffer commandBuffer = {};
+        VkCommandPoolCreateInfo commandPoolCI{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+            .queueFamilyIndex = appInstance->GetVulkanContext()->graphicsQueueFamily
+        };
+        chk(vkCreateCommandPool(device, &commandPoolCI, nullptr, &commandPool));
+        VkCommandBufferAllocateInfo commandBufferAI{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .pNext = nullptr,
+            .commandPool = commandPool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = 1
+        };
+        chk(vkAllocateCommandBuffers(device, &commandBufferAI, &commandBuffer));
+        VkCommandBufferBeginInfo commandBufferBI{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .pNext = nullptr,
+            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        };
+        chk(vkBeginCommandBuffer(commandBuffer, &commandBufferBI));
+        
     return;
 }

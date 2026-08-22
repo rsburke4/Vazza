@@ -7,6 +7,8 @@
 #include <iostream>
 
 #include "Application.h"
+#include "Texture.h"
+
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_vulkan.h"
 #include "vk_mem_alloc.h"
@@ -54,7 +56,7 @@ struct ShaderDataBuffer{
 	VkDeviceAddress deviceAddress{};
 };
 
-struct Texture{
+struct TextureStruct{
 	VmaAllocation allocation{ VK_NULL_HANDLE };
 	VkImage image{ VK_NULL_HANDLE };
 	VkImageView view { VK_NULL_HANDLE };
@@ -87,7 +89,7 @@ std::array<VkCommandBuffer, maxFramesInFlight> commandBuffers;
 std::array<VkFence, maxFramesInFlight> fences;
 std::array<VkSemaphore, maxFramesInFlight> imageAquiredSemaphores;
 std::vector<VkSemaphore> renderCompleteSemaphores;
-std::array<Texture, 3> textures{}; //Hard coded numbers like this are not good for business
+std::array<TextureStruct, 3> textures{}; //Hard coded numbers like this are not good for business
 VkPipelineLayout pipelineLayout;
 VkPipeline pipeline;
 
