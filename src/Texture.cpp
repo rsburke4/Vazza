@@ -13,12 +13,13 @@ bool Texture::doLoad(){
     //Work with all ktx internally
 
     //Load raw image data from disk with format detection
-    unsigned char* data = LoadImageData();
+    uint32_t size;
+    unsigned char* data = LoadImageData(&size);
     if(!data){
         return false; //Failed to load image
     }
     //Transform raw pixel data into Vulkan GPU resources
-    CreateVulkanImage(data);
+    CreateVulkanImage(data, size);
     //Clean up temporary CPU memory to prevent leaks
     FreeImageData(data);
 
@@ -44,7 +45,7 @@ bool Texture::doUnload(){
 }
 
 //TODO: Return format type as well?
-unsigned char* Texture::LoadImageData(){
+unsigned char* Texture::LoadImageData(uint32_t &size){
     ktxTexture* tempTexture{nullptr};
     KTX_error_code err = ktxTexture_CreateFromNamedFile(filePath.c_str(), KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &tempTexture);
     if(err != KTX_SUCCESS){
@@ -75,6 +76,7 @@ unsigned char* Texture::LoadImageData(){
  
     //Make persistent buffer and return
     unsigned char* externalBuffer = new unsigned char[bufferSize];
+    size = bufferSize;
     std::memcpy(externalBuffer, internalPtr, bufferSize);
     ktxTexture_Destroy(tempTexture);
 
@@ -85,7 +87,7 @@ void Texture::FreeImageData(unsigned char* data){
     delete[] data;
 }
 
-void Texture::CreateVulkanImage(unsigned char* data){
+void Texture::CreateVulkanImage(unsigned char* data, uint32_t size){
         // Implementation to create Vulkan image, allocate memory, and upload data
         Application *appInstance = Application::GetInstance();
         VkDevice device = appInstance->GetVulkanContext()->device;
@@ -156,6 +158,44 @@ void Texture::CreateVulkanImage(unsigned char* data){
             .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
         };
         chk(vkBeginCommandBuffer(commandBuffer, &commandBufferBI));
-        
+
+        //Set up memory barrier to get data into optimal transfer format
+        VkImageMemoryBarrier2KHR imgWriteBarrier{
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
+			.srcStageMask = VK_PIPELINE_STAGE_2_NONE,
+			.srcAccessMask = VK_ACCESS_2_NONE,
+			.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
+			.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
+			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			.image = image,
+			.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = levels, .layerCount = layers}
+		};
+        VkDependencyInfo imgWriteDI{
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .pNext = nullptr,
+            .imageMemoryBarrierCount = 1,
+            .pImageMemoryBarriers = &imgWriteBarrier
+        };
+        vkCmdPipelineBarrier2KHR(commandBuffer, &imgWriteDI);
+
+        //Copy the actual buffer
+        VkBuffer imageBuffer;
+        VkBufferCreateInfo{
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .pNext = nullptr,
+            .size = 
+            .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+
+        };
+        chk(vkCreateBuffer(device, nullptr, imageBuffer));
+        vkCmdCopyBufferToImage(commandBuffer, data, image, layout, regionCount, pRegions);
+
+        chk(vkEndCommandBuffer(commandBuffer));
+
+        VkSubmitInfo submitInfo{
+             
+        };
+        chk(vkQueueSubmit(appInstance->GetVulkanContext()->graphicsQueue, ));
     return;
 }
