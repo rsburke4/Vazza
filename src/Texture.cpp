@@ -181,16 +181,24 @@ void Texture::CreateVulkanImage(unsigned char* data, uint32_t size){
 
         //Copy the actual buffer
         VkBuffer imageBuffer;
-        VkBufferCreateInfo{
+        VkBufferCreateInfo imageBufferCI{
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .pNext = nullptr,
-            .size = 
+            .size = size,
             .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 
         };
-        chk(vkCreateBuffer(device, nullptr, imageBuffer));
-        vkCmdCopyBufferToImage(commandBuffer, data, image, layout, regionCount, pRegions);
+        VmaAllocationCreateInfo imgSrcAllocCI{
+			.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+			.usage = VMA_MEMORY_USAGE_AUTO
+		};
+        VmaAllocation imgSrcAllocation {};
+        VmaAllocationInfo imgSrcAllocInfo {};
+        chk(vmaCreateBuffer(appInstance->GetVulkanContext()->allocator, &imageBufferCI, &imgSrcAllocCI, &imageBuffer, &imgSrcAllocation, &imgSrcAllocInfo));
+        //Put data into host-side VkBuffer
+        memcpy(imgSrcAllocInfo.pMappedData, data, size);
 
+        vkCmdCopyBufferToImage(commandBuffer, imageBuffer, image, layout, regionCount, pRegions);
         chk(vkEndCommandBuffer(commandBuffer));
 
         VkSubmitInfo submitInfo{
