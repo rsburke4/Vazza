@@ -25,9 +25,9 @@ class Texture : public Resource{
         int layers = 0; //Will usually be 1?
         int levels = 0;
 
-        unsigned char* LoadImageData(uint32_t &size);
+        unsigned char* LoadImageData(uint32_t &size, ktxTexture *texture);
         void FreeImageData(unsigned char* data);
-        void CreateVulkanImage(unsigned char* data, uint32_t size);
+        void CreateVulkanImage(unsigned char* data, uint32_t size, ktxTexture *texture);
 
     public:
         explicit Texture(const std::string& id, std::filesystem::path filename) : Resource(id) {}

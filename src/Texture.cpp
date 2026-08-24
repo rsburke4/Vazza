@@ -7,14 +7,16 @@
 #include <cstring>
 #include <vulkan/vulkan.h>
 #include <filesystem>
+#include <vector>
 
 
 bool Texture::doLoad(){
     //Work with all ktx internally
 
     //Load raw image data from disk with format detection
-    uint32_t size;
-    unsigned char* data = LoadImageData(&size);
+    uint32_t size = 0;
+    ktxTexture* texture = {nullptr};
+    unsigned char* data = LoadImageData(&size, texture);
     if(!data){
         return false; //Failed to load image
     }
@@ -45,9 +47,8 @@ bool Texture::doUnload(){
 }
 
 //TODO: Return format type as well?
-unsigned char* Texture::LoadImageData(uint32_t &size){
-    ktxTexture* tempTexture{nullptr};
-    KTX_error_code err = ktxTexture_CreateFromNamedFile(filePath.c_str(), KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &tempTexture);
+unsigned char* Texture::LoadImageData(uint32_t &size, ktxTexture *texture){
+    KTX_error_code err = ktxTexture_CreateFromNamedFile(filePath.c_str(), KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &texture);
     if(err != KTX_SUCCESS){
         //TODO: Replace with cached "missing texture image"
         throw std::runtime_error("Problem loading image from disk");
@@ -55,30 +56,29 @@ unsigned char* Texture::LoadImageData(uint32_t &size){
     }
 
     //Check to see if KTX2 is used. Convert as needed
-    if(tempTexture->classId == ktxTexture2_c){
-        ktxTexture2* ktx2 = reinterpret_cast<ktxTexture2*>(tempTexture);
+    if(texture->classId == ktxTexture2_c){
+        ktxTexture2* ktx2 = reinterpret_cast<ktxTexture2*>(texture);
         KTX_error_code transcodeRes = ktxTexture2_TranscodeBasis(ktx2, KTX_TTF_BC7_RGBA, 0);
         if(transcodeRes != KTX_SUCCESS){
-            ktxTexture_Destroy(tempTexture);
+            ktxTexture_Destroy(texture);
             throw std::runtime_error("Problem transcribing KTX2");
             return nullptr;
         }
     }
 
     //Fetch size and internal pointer
-    size_t bufferSize = ktxTexture_GetDataSize(tempTexture);
-    ktx_uint8_t* internalPtr = ktxTexture_GetData(tempTexture);
-    width = tempTexture->baseWidth;
-    height = tempTexture->baseHeight;
-    levels = tempTexture->numLevels;
-    layers = tempTexture->numLayers;
-    format = ktxTexture_GetVkFormat(tempTexture);
+    size_t bufferSize = ktxTexture_GetDataSize(texture);
+    ktx_uint8_t* internalPtr = ktxTexture_GetData(texture);
+    width = texture->baseWidth;
+    height = texture->baseHeight;
+    levels = texture->numLevels;
+    layers = texture->numLayers;
+    format = ktxTexture_GetVkFormat(texture);
  
     //Make persistent buffer and return
     unsigned char* externalBuffer = new unsigned char[bufferSize];
     size = bufferSize;
     std::memcpy(externalBuffer, internalPtr, bufferSize);
-    ktxTexture_Destroy(tempTexture);
 
     return externalBuffer;
 }
@@ -87,7 +87,7 @@ void Texture::FreeImageData(unsigned char* data){
     delete[] data;
 }
 
-void Texture::CreateVulkanImage(unsigned char* data, uint32_t size){
+void Texture::CreateVulkanImage(unsigned char* data, uint32_t size, ktxTexture *texture){
         // Implementation to create Vulkan image, allocate memory, and upload data
         Application *appInstance = Application::GetInstance();
         VkDevice device = appInstance->GetVulkanContext()->device;
@@ -192,18 +192,31 @@ void Texture::CreateVulkanImage(unsigned char* data, uint32_t size){
 			.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
 			.usage = VMA_MEMORY_USAGE_AUTO
 		};
+		std::vector<VkBufferImageCopy> copyRegions{};
+		for(uint32_t j = 0; j < levels; j++){
+            ktx_size_t mipOffset{0};
+			KTX_error_code ret = ktxTexture_GetImageOffset(texture, j, 0, 0, &mipOffset);
+			copyRegions.push_back({
+				.bufferOffset = mipOffset,
+				.imageSubresource{.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = (uint32_t)j, .layerCount = layers},
+				.imageExtent{.width = width >> j, .height = height >> j, .depth = 1}
+			});
+		}
+
         VmaAllocation imgSrcAllocation {};
         VmaAllocationInfo imgSrcAllocInfo {};
         chk(vmaCreateBuffer(appInstance->GetVulkanContext()->allocator, &imageBufferCI, &imgSrcAllocCI, &imageBuffer, &imgSrcAllocation, &imgSrcAllocInfo));
         //Put data into host-side VkBuffer
         memcpy(imgSrcAllocInfo.pMappedData, data, size);
 
-        vkCmdCopyBufferToImage(commandBuffer, imageBuffer, image, layout, regionCount, pRegions);
+        vkCmdCopyBufferToImage(commandBuffer, imageBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(copyRegions.size()), copyRegions.data());
         chk(vkEndCommandBuffer(commandBuffer));
 
         VkSubmitInfo submitInfo{
              
         };
         chk(vkQueueSubmit(appInstance->GetVulkanContext()->graphicsQueue, ));
+
+        ktxTexture_Destroy(texture);
     return;
 }

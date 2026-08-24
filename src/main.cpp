@@ -329,7 +329,7 @@ int main(int argc, char* argv[]){
 		};
 		chk(vkBeginCommandBuffer(cbOneTime, &cbOneTimeBI));
 		VkImageMemoryBarrier2KHR barrierTexImage{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
 			.srcStageMask = VK_PIPELINE_STAGE_2_NONE,
 			.srcAccessMask = VK_ACCESS_2_NONE,
 			.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
