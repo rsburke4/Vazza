@@ -16,12 +16,12 @@ bool Texture::doLoad(){
     //Load raw image data from disk with format detection
     uint32_t size = 0;
     ktxTexture* texture = {nullptr};
-    unsigned char* data = LoadImageData(&size, texture);
+    unsigned char* data = LoadImageData(size, &texture);
     if(!data){
         return false; //Failed to load image
     }
     //Transform raw pixel data into Vulkan GPU resources
-    CreateVulkanImage(data, size);
+    CreateVulkanImage(data, size, texture);
     //Clean up temporary CPU memory to prevent leaks
     FreeImageData(data);
 
@@ -47,8 +47,8 @@ bool Texture::doUnload(){
 }
 
 //TODO: Return format type as well?
-unsigned char* Texture::LoadImageData(uint32_t &size, ktxTexture *texture){
-    KTX_error_code err = ktxTexture_CreateFromNamedFile(filePath.c_str(), KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &texture);
+unsigned char* Texture::LoadImageData(uint32_t &size, ktxTexture **texture){
+    KTX_error_code err = ktxTexture_CreateFromNamedFile(filePath.c_str(), KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, texture);
     if(err != KTX_SUCCESS){
         //TODO: Replace with cached "missing texture image"
         throw std::runtime_error("Problem loading image from disk");
@@ -56,24 +56,24 @@ unsigned char* Texture::LoadImageData(uint32_t &size, ktxTexture *texture){
     }
 
     //Check to see if KTX2 is used. Convert as needed
-    if(texture->classId == ktxTexture2_c){
+    if((*texture)->classId == ktxTexture2_c){
         ktxTexture2* ktx2 = reinterpret_cast<ktxTexture2*>(texture);
         KTX_error_code transcodeRes = ktxTexture2_TranscodeBasis(ktx2, KTX_TTF_BC7_RGBA, 0);
         if(transcodeRes != KTX_SUCCESS){
-            ktxTexture_Destroy(texture);
+            ktxTexture_Destroy(*texture);
             throw std::runtime_error("Problem transcribing KTX2");
             return nullptr;
         }
     }
 
     //Fetch size and internal pointer
-    size_t bufferSize = ktxTexture_GetDataSize(texture);
-    ktx_uint8_t* internalPtr = ktxTexture_GetData(texture);
-    width = texture->baseWidth;
-    height = texture->baseHeight;
-    levels = texture->numLevels;
-    layers = texture->numLayers;
-    format = ktxTexture_GetVkFormat(texture);
+    size_t bufferSize = ktxTexture_GetDataSize(*texture);
+    ktx_uint8_t* internalPtr = ktxTexture_GetData(*texture);
+    width = (*texture)->baseWidth;
+    height = (*texture)->baseHeight;
+    levels = (*texture)->numLevels;
+    layers = (*texture)->numLayers;
+    format = ktxTexture_GetVkFormat(*texture);
  
     //Make persistent buffer and return
     unsigned char* externalBuffer = new unsigned char[bufferSize];
@@ -202,21 +202,49 @@ void Texture::CreateVulkanImage(unsigned char* data, uint32_t size, ktxTexture *
 				.imageExtent{.width = width >> j, .height = height >> j, .depth = 1}
 			});
 		}
-
         VmaAllocation imgSrcAllocation {};
         VmaAllocationInfo imgSrcAllocInfo {};
         chk(vmaCreateBuffer(appInstance->GetVulkanContext()->allocator, &imageBufferCI, &imgSrcAllocCI, &imageBuffer, &imgSrcAllocation, &imgSrcAllocInfo));
         //Put data into host-side VkBuffer
         memcpy(imgSrcAllocInfo.pMappedData, data, size);
-
         vkCmdCopyBufferToImage(commandBuffer, imageBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(copyRegions.size()), copyRegions.data());
+
+        //Creata barrier to prevent reading before image is done transfering to optimal format
+        VkImageMemoryBarrier2KHR barrierTexRead{
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+			.srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
+			.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+			.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			.dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+			.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			.newLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+			.image = image,
+			.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = levels, .layerCount = layers}
+		};
+        imgWriteDI.pImageMemoryBarriers = &barrierTexRead;
+        vkCmdPipelineBarrier2KHR(commandBuffer, &imgWriteDI);
         chk(vkEndCommandBuffer(commandBuffer));
 
-        VkSubmitInfo submitInfo{
-             
-        };
-        chk(vkQueueSubmit(appInstance->GetVulkanContext()->graphicsQueue, ));
+		VkSubmitInfo submitInfo{
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.commandBufferCount = 1,
+			.pCommandBuffers = &commandBuffer
+		};
 
+        //Create a fence for this transfer. We don't really want the GPU doing much
+        //Before it has the textures to do so.
+        VkFence transferFence = {};
+        VkFenceCreateInfo transferFenceCI = {
+            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+            .pNext = nullptr,
+            //.flags = 0 <- We're leaving this out because we DON'T want the fence to start as signaled.
+        };
+        chk(vkCreateFence(appInstance->GetVulkanContext()->device, &transferFenceCI, nullptr, &transferFence));
+
+        //Submit queue. Once finished, delete intermediate data
+        chk(vkQueueSubmit(appInstance->GetVulkanContext()->graphicsQueue, 1, &submitInfo, transferFence));
+        vkWaitForFences(appInstance->GetVulkanContext()->device, 1, &transferFence, VK_TRUE, UINT64_MAX);
+        vmaDestroyBuffer(appInstance->GetVulkanContext()->allocator, imageBuffer, imgSrcAllocation);
         ktxTexture_Destroy(texture);
     return;
 }

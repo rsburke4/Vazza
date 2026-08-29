@@ -178,6 +178,10 @@ int main(int argc, char* argv[]){
 
 	std::cout << "Image View\n";
 
+	std::cout << "Text image loading\n";
+	Texture testImage = Texture("test", "./assets/suzanne0.ktx");
+	testImage.doLoad();
+
 	//Load mesh (DOES NOT HANDLE BAD DATA WELL)
 	//ALL DATA MUST HAVE NORMALS AND TEXTURE COORDS
 	//TODO: switch to gltf/glb

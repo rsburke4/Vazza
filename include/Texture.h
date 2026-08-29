@@ -3,6 +3,8 @@
 
 #include "Resource.h"
 #include "Application.h"
+#include "ktx.h"
+#include "ktxvulkan.h"
 #include <vulkan/vulkan.h>
 #include <filesystem>
 
@@ -16,7 +18,7 @@ class Texture : public Resource{
         VkSampler sampler;      //Sampling configuration
         VkFormat format;        //Format of the image
         VmaAllocation allocation;
-        std::filesystem::path filePath;
+        const std::filesystem::path filePath;
 
 
     //All the normal information about the image
@@ -25,12 +27,12 @@ class Texture : public Resource{
         int layers = 0; //Will usually be 1?
         int levels = 0;
 
-        unsigned char* LoadImageData(uint32_t &size, ktxTexture *texture);
+        unsigned char* LoadImageData(uint32_t &size, ktxTexture **texture);
         void FreeImageData(unsigned char* data);
         void CreateVulkanImage(unsigned char* data, uint32_t size, ktxTexture *texture);
 
     public:
-        explicit Texture(const std::string& id, std::filesystem::path filename) : Resource(id) {}
+        explicit Texture(const std::string& id, std::filesystem::path filename) : Resource(id), filePath(filename) {}
 
         ~Texture() override{
             Unload();
