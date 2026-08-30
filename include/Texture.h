@@ -12,7 +12,7 @@ class Texture : public Resource{
     //All the good stuff for loading images
     private:
         VkImage image;          //GPU image object containing pixel data
-        VkDeviceMemory memory;  //GPU memory allocation backing the image
+        //VkDeviceMemory memory;  //GPU memory allocation backing the image
         VkDeviceSize offset;    //Offset within the memory allocation for this texture
         VkImageView imageView;  //Shader-accessible view into the image
         VkSampler sampler;      //Sampling configuration

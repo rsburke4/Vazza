@@ -33,13 +33,16 @@ bool Texture::doUnload(){
     if(IsLoaded()){
         //Get the device handle for resource destruction
         VkDevice device = Application::GetInstance()->GetVulkanContext()->device;
+        VmaAllocator allocator = Application::GetInstance()->GetVulkanContext()->allocator;
 
         //Destroy GPU objects in reverse creation order
         //This ordering prevents use-after-free errors in GPU drivers
-        vkDestroySampler(device, sampler, VK_NULL_HANDLE);
-        vkDestroyImageView(device, imageView, VK_NULL_HANDLE);
-        vkDestroyImage(device, image, VK_NULL_HANDLE);
-        vkFreeMemory(device, memory, VK_NULL_HANDLE);
+        vkDestroySampler(device, sampler, nullptr);
+        vkDestroyImageView(device, imageView, nullptr);
+        //vkDestroyImage(device, image, nullptr);
+        vmaDestroyImage(allocator, image, allocation);
+        //vkFreeMemory(device, memory, nullptr);
+        //vmaFreeMemory(allocator, allocation);
 
         return true;
     }
@@ -244,7 +247,11 @@ void Texture::CreateVulkanImage(unsigned char* data, uint32_t size, ktxTexture *
         //Submit queue. Once finished, delete intermediate data
         chk(vkQueueSubmit(appInstance->GetVulkanContext()->graphicsQueue, 1, &submitInfo, transferFence));
         vkWaitForFences(appInstance->GetVulkanContext()->device, 1, &transferFence, VK_TRUE, UINT64_MAX);
+
+        vkDestroyFence(device, transferFence, nullptr);
         vmaDestroyBuffer(appInstance->GetVulkanContext()->allocator, imageBuffer, imgSrcAllocation);
+        vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+        vkDestroyCommandPool(device, commandPool, nullptr);
         ktxTexture_Destroy(texture);
     return;
 }

@@ -98,52 +98,8 @@ glm::ivec2 windowSize{};
 glm::vec3 camPose{0.0f, 0.0f, -6.0f};
 glm::vec3 objectRotations[3]{};
 Slang::ComPtr<slang::IGlobalSession> slangGlobalSession;
-/*
-bool checkValidationLayerSupport(){
-	uint32_t layerCount;
-	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-	std::vector<VkLayerProperties> availableLayers(layerCount);
-	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-	for(const auto& layerName : validationLayers){
-		bool layerFound = false;
-		for(const auto& layerProperties : availableLayers){
-			if(strcmp(layerName, layerProperties.layerName) == 0){
-				layerFound = true;
-				break;
-			}
-		}
-		if(!layerFound){
-			return false;
-		}
-	}
-	return true;
-}
-*/
-/*static inline void chk(VkResult result){
-	if(result != VK_SUCCESS){
-		std::cerr << "Vulkan call returned an error (" << result << ")\n";
-		exit(result);
-	}
-}
-
-static inline void chk(bool result){
-	if(!result){
-		std::cerr << "Call returned an error\n";
-		exit(result);
-	}
-}
-
-static inline void chkSwapchain(VkResult result){
-	if(result < VK_SUCCESS){
-		if(result == VK_ERROR_OUT_OF_DATE_KHR){
-			updateSwapchain = true;
-			return;
-		}
-		std::cerr << "Vulkan swapchain call returned an error (" << result << ")\n";
-		exit(result);
-	}
-}*/
+std::vector<Texture*> monkeyColors;
 
 int main(int argc, char* argv[]){
 	Application *tutorialApplication = Application::GetInstance();
@@ -179,8 +135,8 @@ int main(int argc, char* argv[]){
 	std::cout << "Image View\n";
 
 	std::cout << "Text image loading\n";
-	Texture testImage = Texture("test", "./assets/suzanne0.ktx");
-	testImage.doLoad();
+	//Texture testImage = Texture("test", "./assets/suzanne0.ktx");
+	//testImage.Load();
 
 	//Load mesh (DOES NOT HANDLE BAD DATA WELL)
 	//ALL DATA MUST HAVE NORMALS AND TEXTURE COORDS
@@ -273,135 +229,16 @@ int main(int argc, char* argv[]){
 
 	std::vector<VkDescriptorImageInfo> textureDescriptors{};
 	for(uint32_t i = 0; i < textures.size(); i++){
-		ktxTexture* ktxTexture{nullptr};
 		std::string filename = "./assets/suzanne" + std::to_string(i) + ".ktx";
-		ktxTexture_CreateFromNamedFile(filename.c_str(), KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &ktxTexture);
-		//Create image location for textures
-		VkImageCreateInfo texImgCI{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-			.imageType = VK_IMAGE_TYPE_2D,
-			.format = ktxTexture_GetVkFormat(ktxTexture),
-			.extent = {.width = ktxTexture->baseWidth, .height = ktxTexture->baseHeight, .depth = 1},
-			.mipLevels = ktxTexture->numLevels,
-			.arrayLayers = 1,
-			.samples = VK_SAMPLE_COUNT_1_BIT,
-			.tiling = VK_IMAGE_TILING_OPTIMAL,
-			.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-			.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
-		};
-		VmaAllocationCreateInfo texImageAllocCI{.usage = VMA_MEMORY_USAGE_AUTO };
-		chk(vmaCreateImage(allocator, &texImgCI, &texImageAllocCI, &textures[i].image, &textures[i].allocation, nullptr));
-		VkImageViewCreateInfo texViewCI{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-			.image = textures[i].image,
-			.viewType = VK_IMAGE_VIEW_TYPE_2D,
-			.format = texImgCI.format,
-			.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = ktxTexture->numLevels, .layerCount = 1}
-		};
-		chk(vkCreateImageView(device, &texViewCI, nullptr, &textures[i].view));
-		VkBuffer imgSrcBuffer{};
-		VmaAllocation imgSrcAllocation{};
-		VkBufferCreateInfo imgSrcBufferCI{
-			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-			.size = (uint32_t)ktxTexture->dataSize,
-			.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT
-		};
-		VmaAllocationCreateInfo imgSrcAllocCI{
-			.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-			.usage = VMA_MEMORY_USAGE_AUTO
-		};
-		VmaAllocationInfo imgSrcAllocInfo{};
-		chk(vmaCreateBuffer(allocator, &imgSrcBufferCI, &imgSrcAllocCI, &imgSrcBuffer, &imgSrcAllocation, &imgSrcAllocInfo));
-		memcpy(imgSrcAllocInfo.pMappedData, ktxTexture->pData, ktxTexture->dataSize);
-		VkFenceCreateInfo fenceOneTimeCI{
-			.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
-		};
-	
-		//One time buffer to upload images to GPU
-		VkFence fenceOneTime{};
-		chk(vkCreateFence(device, &fenceOneTimeCI, nullptr, &fenceOneTime));
-		VkCommandBuffer cbOneTime{};
-		VkCommandBufferAllocateInfo cbOneTimeAI{
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			.commandPool = commandPool,
-			.commandBufferCount = 1
-		};
-		chk(vkAllocateCommandBuffers(device, &cbOneTimeAI, &cbOneTime));
-		VkCommandBufferBeginInfo cbOneTimeBI{
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-		};
-		chk(vkBeginCommandBuffer(cbOneTime, &cbOneTimeBI));
-		VkImageMemoryBarrier2KHR barrierTexImage{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR,
-			.srcStageMask = VK_PIPELINE_STAGE_2_NONE,
-			.srcAccessMask = VK_ACCESS_2_NONE,
-			.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-			.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.image = textures[i].image,
-			.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = ktxTexture->numLevels, .layerCount = 1}
-		};
-		VkDependencyInfo barrierTexInfo{
-			.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-			.imageMemoryBarrierCount = 1,
-			.pImageMemoryBarriers = &barrierTexImage
-		};
-		vkCmdPipelineBarrier2KHR(cbOneTime, &barrierTexInfo);
-		std::vector<VkBufferImageCopy> copyRegions{};
-		for(uint32_t j = 0; j < ktxTexture->numLevels; j++){
-			ktx_size_t mipOffset{0};
-			KTX_error_code ret = ktxTexture_GetImageOffset(ktxTexture, j, 0, 0, &mipOffset);
-			copyRegions.push_back({
-				.bufferOffset = mipOffset,
-				.imageSubresource{.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = (uint32_t)j, .layerCount = 1},
-				.imageExtent{.width = ktxTexture->baseWidth >> j, .height = ktxTexture->baseHeight >> j, .depth = 1}
-			});
-		}
-		vkCmdCopyBufferToImage(cbOneTime, imgSrcBuffer, textures[i].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(copyRegions.size()), copyRegions.data());
-		VkImageMemoryBarrier2KHR barrierTexRead{
-			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-			.srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
-			.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-			.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-			.dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-			.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			.newLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-			.image = textures[i].image,
-			.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = ktxTexture->numLevels, .layerCount = 1}
-		};
-		barrierTexInfo.pImageMemoryBarriers = &barrierTexRead;
-		vkCmdPipelineBarrier2KHR(cbOneTime, &barrierTexInfo);
-		chk(vkEndCommandBuffer(cbOneTime));
-		VkSubmitInfo oneTimeSI{
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			.commandBufferCount = 1,
-			.pCommandBuffers = &cbOneTime
-		};
-		chk(vkQueueSubmit(queue, 1, &oneTimeSI, fenceOneTime));
-		chk(vkWaitForFences(device, 1, &fenceOneTime, VK_TRUE, UINT64_MAX));
-		vkDestroyFence(device, fenceOneTime, nullptr);
-		vmaDestroyBuffer(allocator, imgSrcBuffer, imgSrcAllocation);
-
-		VkSamplerCreateInfo samplerCI{
-			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			.magFilter = VK_FILTER_LINEAR,
-			.minFilter = VK_FILTER_LINEAR,
-			.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-			.anisotropyEnable = VK_TRUE,
-			.maxAnisotropy = 8.0f, //Widely supported constant
-			.maxLod = (float)ktxTexture->numLevels
-		};
-		chk(vkCreateSampler(device, &samplerCI, nullptr, &textures[i].sampler));
-		//Clean up mess
-		ktxTexture_Destroy(ktxTexture);
+		monkeyColors.push_back(new Texture("monkey" + std::to_string(i), filename));
+		monkeyColors[i]->Load();
 		textureDescriptors.push_back({
-			.sampler = textures[i].sampler,
-			.imageView = textures[i].view,
+			.sampler = monkeyColors[i]->GetSampler(),
+			.imageView = monkeyColors[i]->GetImageView(),
 			.imageLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL
 		});
 	}
+
 
 	VkDescriptorBindingFlags descVariableFlag{ VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT };
 	VkDescriptorSetLayoutBindingFlagsCreateInfo descBindingFlags{ 
@@ -820,9 +657,7 @@ int main(int argc, char* argv[]){
 	}
 	vmaDestroyBuffer(allocator, vBuffer, vBufferAllocation);
 	for(auto i = 0; i < textures.size(); i++){
-		vkDestroyImageView(device, textures[i].view, nullptr);
-		vkDestroySampler(device, textures[i].sampler, nullptr);
-		vmaDestroyImage(allocator, textures[i].image, textures[i].allocation);
+		monkeyColors[i]->Unload();
 	}
 	vkDestroyDescriptorSetLayout(device, descriptorSetLayoutTex, nullptr);
 	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
