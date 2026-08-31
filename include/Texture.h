@@ -32,7 +32,8 @@ class Texture : public Resource{
         void CreateVulkanImage(unsigned char* data, uint32_t size, ktxTexture *texture);
 
     public:
-        explicit Texture(const std::string& id, std::filesystem::path filename) : Resource(id), filePath(filename) {}
+        explicit Texture(const std::string& id) : Resource(id), filePath(id) {}
+       // explicit Texture(const std::string& id, std::filesystem::path filename) : Resource(id){ filePath = filename; }
 
         ~Texture() override{
             Unload();

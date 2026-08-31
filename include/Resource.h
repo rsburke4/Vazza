@@ -62,6 +62,8 @@ class ResourceManager
     std::unordered_map<std::type_index, std::unordered_map<std::string, ResourceData>> refCounts;
 
     //TODO: Remove autos where possible
+    public:
+
     template<typename T>
     ResourceHandle<T> Load(const std::string &resourceId){
         static_assert(std::is_base_of<Resource, T>::value, "T must derive from Resource");
@@ -73,7 +75,7 @@ class ResourceManager
             auto& refDataCounts = refCounts[std::type_index(typeid(T))];
             auto refIt = refDataCounts.find(resourceId);
             refIt->second.refCount++;
-            return ResouceHandle<T>(resourceId, this);
+            return ResourceHandle<T>(resourceId, this);
         }
 
         //Create new resource instance and attempt loading

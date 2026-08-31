@@ -99,7 +99,7 @@ glm::vec3 camPose{0.0f, 0.0f, -6.0f};
 glm::vec3 objectRotations[3]{};
 Slang::ComPtr<slang::IGlobalSession> slangGlobalSession;
 
-std::vector<Texture*> monkeyColors;
+std::vector<ResourceHandle<Texture>> monkeyColors;
 
 int main(int argc, char* argv[]){
 	Application *tutorialApplication = Application::GetInstance();
@@ -131,6 +131,8 @@ int main(int argc, char* argv[]){
 	depthImage = tutorialApplication->GetRenderingContext()->depthImage;
 	depthImageView = tutorialApplication->GetRenderingContext()->depthImageView;
 	VkFormat depthFormat = tutorialApplication->GetRenderingContext()->depthFormat;
+
+	ResourceManager resourceManager;
 
 	std::cout << "Image View\n";
 
@@ -230,8 +232,7 @@ int main(int argc, char* argv[]){
 	std::vector<VkDescriptorImageInfo> textureDescriptors{};
 	for(uint32_t i = 0; i < textures.size(); i++){
 		std::string filename = "./assets/suzanne" + std::to_string(i) + ".ktx";
-		monkeyColors.push_back(new Texture("monkey" + std::to_string(i), filename));
-		monkeyColors[i]->Load();
+		monkeyColors.push_back(resourceManager.Load<Texture>(filename));
 		textureDescriptors.push_back({
 			.sampler = monkeyColors[i]->GetSampler(),
 			.imageView = monkeyColors[i]->GetImageView(),
@@ -656,9 +657,9 @@ int main(int argc, char* argv[]){
 		vkDestroyImageView(device, swapchainImageViews[i], nullptr);
 	}
 	vmaDestroyBuffer(allocator, vBuffer, vBufferAllocation);
-	for(auto i = 0; i < textures.size(); i++){
-		monkeyColors[i]->Unload();
-	}
+	
+	resourceManager.UnloadAll();
+
 	vkDestroyDescriptorSetLayout(device, descriptorSetLayoutTex, nullptr);
 	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
