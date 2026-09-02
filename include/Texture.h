@@ -1,5 +1,5 @@
-#ifndef __TEXTURE_H__
-#define __TEXTURE_H__
+#ifndef __TEXTURE_RESOURCE_H__
+#define __TEXTURE_RESOURCE_H__
 
 #include "Resource.h"
 #include "Application.h"
