@@ -39,11 +39,7 @@ bool Texture::doUnload(){
         //This ordering prevents use-after-free errors in GPU drivers
         vkDestroySampler(device, sampler, nullptr);
         vkDestroyImageView(device, imageView, nullptr);
-        //vkDestroyImage(device, image, nullptr);
         vmaDestroyImage(allocator, image, allocation);
-        //vkFreeMemory(device, memory, nullptr);
-        //vmaFreeMemory(allocator, allocation);
-
         return true;
     }
     return false;

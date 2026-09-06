@@ -1,4 +1,6 @@
 #include "Mesh.h"
+#include "tiny_gltf_v3.h"
+#include <string>
 
 bool Mesh::doLoad(){
         // Step 2a: Construct file path using standardized naming convention
@@ -45,14 +47,67 @@ bool Mesh::doUnload(){
     return false;
 }
 
+//TODO: Overhaul mesh support with full GLTF support
+//This would include a GLTF parser class for loading texture, and model resources
+//Somehow Resources would need a major rework
 bool Mesh::LoadMeshData(std::filesystem::path filePath, std::vector<Vertex> &vertices, std::vector<uint32_t> &indices){
+    tg3_parse_options opts;
+    tg3_error_stack errors;
+    tg3_model model;
 
+    tg3_parse_options_init(&opts);
+    tg3_error_stack_init(&errors);
+
+    tg3_error_code err = tg3_parse_file(&model, &errors, filePath.c_str(), filePath.string().length(), &opts);
+    if (err != TG3_OK) {
+    for (uint32_t i = 0; i < errors.count; i++) {
+        fprintf(stderr, "[%d] %s\n", (int)errors.entries[i].severity,
+                errors.entries[i].message ? errors.entries[i].message : "(null)");
+        }
+    }
+
+    // ... use model ...
+    //TODO: Add support for multiple uv sets
+    if(model.meshes_count > 0){
+        for(uint32_t i = 0; i < model.meshes[0].primitives_count; i++){
+            if(model.meshes[0].primitives[i].mode == -1){
+                    uint32_t vertex_i = -1;
+                    uint32_t normal_i = -1;
+                    uint32_t uv_i = -1;
+                    for(uint32_t j = 0; j < model.meshes[0].primitives[i].attributes_count; j++){
+                        const char *attrName = model.meshes[0].primitives[i].attributes[j].key.data;
+                        uint32_t nameLen = model.meshes[0].primitives[i].attributes[j].key.len;
+                        std::string attrString(attrName, nameLen);
+                        if(attrString == "POSITION" ) vertex_i = model.meshes[0].primitives[i].attributes[j].value;
+                        if(attrString == "NORMAL") normal_i = model.meshes[0].primitives[i].attributes[j].value;
+                        if(attrString == "TEXCOORD_0") uv_i = model.meshes[0].primitives[i].attributes[j].value;
+                    }
+                    if(vertex_i > 0){
+                       // model.accessors[vertex_i]
+                    }
+                    if(normal_i > 0){
+                       // model.accessors[normal_i]
+                    }
+                    if(uv_i > 0){
+                       // model.accessors[uv_i]
+                    }
+            }
+
+            //vertices.resize(model.meshes[0].);
+            //vertices.resize();
+        }
+    }
+
+
+    tg3_model_free(&model);
+    tg3_error_stack_free(&errors);
+    return false;
 }
 
 void Mesh::CreateVertexBuffer(std::vector<Vertex> &vertices){
-
+    return;
 }
 
 void Mesh::CreateIndexBuffer(std::vector<uint32_t> &indices){
-
+    return;
 }

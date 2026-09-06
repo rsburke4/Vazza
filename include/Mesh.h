@@ -15,7 +15,7 @@ struct Vertex{
 
 class Mesh : public Resource{
     public:
-        explicit Mesh(const std::string& id) : Resource(id), filePath(id) {}
+      explicit Mesh(const std::string& id) : Resource(id), filePath(id) {}
 
       ~Mesh() override {
         Unload();                           // Ensure GPU resources are cleaned up
@@ -28,6 +28,7 @@ class Mesh : public Resource{
       VkBuffer GetIndexBuffer() const { return indexBuffer; }
       uint32_t GetVertexCount() const { return vertexCount; }
       uint32_t GetIndexCount() const { return indexCount; }
+      void Render(){};
 
     private:
       bool LoadMeshData(std::filesystem::path filePath, std::vector<Vertex> &vertices, std::vector<uint32_t> &indices);

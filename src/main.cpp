@@ -8,6 +8,7 @@
 
 #include "Application.h"
 #include "Texture.h"
+#include "Mesh.h"
 
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_vulkan.h"
@@ -34,12 +35,6 @@ constexpr uint32_t maxFramesInFlight{ 2 };
 uint32_t imageIndex{ 0 };
 uint32_t frameIndex{ 0 };
 bool updateSwapchain{ false };
-
-struct Vertex{
-	glm::vec3 pos;
-	glm::vec3 normal;
-	glm::vec2 uv;
-};
 
 struct ShaderData{
 	glm::mat4 projection;
@@ -123,6 +118,11 @@ int main(int argc, char* argv[]){
 	swapchainImageViews = tutorialApplication->GetRenderingContext()->swapchainImageViews;
 	swapchain = tutorialApplication->GetRenderingContext()->swapchain;
 
+	//Load model
+	Mesh testMesh = Mesh("testMesh");
+	/*std::vector<Vertex> testVerts;
+	std::vector<uint32_t> testInds;
+	testMesh.LoadMeshData("./assets/Box.glb", testVerts, testInds);*/
 
 	//Swapchain creation
 	//TODO: This is the bare minimum, and should be extended later
