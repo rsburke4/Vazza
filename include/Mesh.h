@@ -1,6 +1,24 @@
+#define GLTF_COMPONENT_TYPES(X) \
+    X(int8_t,    BYTE)           \
+    X(uint8_t,   UNSIGNED_BYTE)  \
+    X(int16_t,   SHORT)          \
+    X(uint16_t,  UNSIGNED_SHORT) \
+    X(uint32_t,  UNSIGNED_INT)   \
+    X(float,     FLOAT)
+
+#define GLTF_ACCESSOR_TYPES(X) \
+    X(SCALAR, 1)               \
+    X(VEC2,   2)               \
+    X(VEC3,   3)               \
+    X(VEC4,   4)               \
+    X(MAT2,   4)               \
+    X(MAT3,   9)               \
+    X(MAT4,   16)
+
+
 #ifndef __MESH_RESOURCE_H__
 #define __MESH_RESOURCE_H__
-
+#include <cstdint>
 #include "Resource.h"
 #include "Application.h"
 #include <vulkan/vulkan.h>
@@ -13,75 +31,19 @@ struct Vertex{
   //glm::vec4 color;
 };
 
+
 //XMacro Magic
-#define GLTF_COMPONENT_TYPES(X) \
-    X(int8_t,    BYTE)           \
-    X(uint8_t,   UNSIGNED_BYTE)  \
-    X(int16_t,   SHORT)          \
-    X(uint16_t,  UNSIGNED_SHORT) \
-    X(uint32_t,  UNSIGNED_INT)   \
-    X(float,     FLOAT)
 
-template<typename T>
-struct _TG3_Vec2
-{
-    T x, y;
-};
+#define X(type, name) \
+  struct name##_TG3_Vec2 { type x, y; }; \
+  struct name##_TG3_Vec3 { type x, y, z; }; \
+  struct name##_TG3_Vec4 { type x, y, z, w; }; \
+  struct name##_TG3_Mat2 { type data[4]; }; \
+  struct name##_TG3_Mat3 { type data[9]; }; \
+  struct name##_TG3_Mat4 { type data[16]; };
 
-template<typename T>
-struct _TG3_Vec3
-{
-    T x, y, z;
-};
-
-template<typename T>
-struct _TG3_Vec4
-{
-    T x, y, z, w;
-};
-
-template<typename T>
-struct _TG3_Mat2
-{
-    T data[4];
-};
-
-template<typename T>
-struct _TG3_Mat3
-{
-    T data[9];
-};
-
-template<typename T>
-struct _TG3_Mat4
-{
-    T data[16];
-};
-
-#define MAKE_GLTF_TYPES(type, name) \
-    using name##Vec2 = _TG3_Vec2<type>;  \
-    using name##Vec3 = _TG3_Vec3<type>;  \
-    using name##Vec4 = _TG3_Vec4<type>;  \
-    using name##Mat2 = _TG3_Mat2<type>;  \
-    using name##Mat3 = _TG3_Mat3<type>;  \
-    using name##Mat4 = _TG3_Mat4<type>;
-
-GLTF_COMPONENT_TYPES(MAKE_GLTF_TYPES)
-
-#define GLTF_COMPONENT_SIZE(type, name) \
-case TG3_COMPONENT_TYPE_##name: \
-    return sizeof(type);
-
-#undef MAKE_GLTF_TYPES
-
-#define GLTF_ACCESSOR_TYPES(X) \
-    X(SCALAR, 1)               \
-    X(VEC2,   2)               \
-    X(VEC3,   3)               \
-    X(VEC4,   4)               \
-    X(MAT2,   4)               \
-    X(MAT3,   9)               \
-    X(MAT4,   16)
+GLTF_COMPONENT_TYPES(X)
+#undef X
 
 
 class Mesh : public Resource{

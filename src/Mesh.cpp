@@ -1,6 +1,10 @@
+//#include "../include/Mesh.h"
+
+
 #include "Mesh.h"
 #include "tiny_gltf_v3.h"
 #include <string>
+
 
 //TODO: Add assertions and error checking
 template<typename T>
@@ -14,60 +18,29 @@ bool accessBuffer(const tg3_accessor &accessor, tg3_model &model, std::vector<T>
     uint64_t offset = buffer_view.byte_offset + accessor.byte_offset;
 
     switch(accessor.component_type){
-        default:
-            return false;
-        case TG3_COMPONENT_TYPE_BYTE:
-            size = sizeof(int8_t);
-            break;
-        case TG3_COMPONENT_TYPE_DOUBLE:
-            size = sizeof(double);
-            break;
-        case TG3_COMPONENT_TYPE_FLOAT:
-            size = sizeof(float);
-            break;
-        case TG3_COMPONENT_TYPE_INT:
-            size = sizeof(int32_t);
-            break;
-        case TG3_COMPONENT_TYPE_SHORT:
-            size = sizeof(int16_t);
-            break;
-        case TG3_COMPONENT_TYPE_UNSIGNED_BYTE:
-            size = sizeof(uint8_t);
-            break;
-        case TG3_COMPONENT_TYPE_UNSIGNED_INT:
-            size = sizeof(uint32_t);
-            break;
-        case TG3_COMPONENT_TYPE_UNSIGNED_SHORT:
-            size = sizeof(uint16_t);
-            break;
+        #define X(type, name) \
+        case TG3_COMPONENT_TYPE_##name: \
+            size = sizeof(type); \
+            break; 
+        GLTF_COMPONENT_TYPES(X)
+        #undef X
     }
     switch(accessor.type){
-        case TG3_TYPE_VEC2:
-            size *= 2;
-            break;
-        case TG3_TYPE_VEC3:
-            size *= 3;
-            break;
-        case TG3_TYPE_VEC4:
-            size *= 4;
-            break;
-        case TG3_TYPE_MAT2:
-            size *= 4;
-            break;
-        case TG3_TYPE_MAT3:
-            size *= 9;
-            break;
-        case TG3_TYPE_MAT4:
-            size *= 16;
-            break;
+        #define X(type, num) \
+        case(TG3_TYPE_##type): \
+            size *= num; \
+            break; 
+        GLTF_ACCESSOR_TYPES(X)
+        #undef X
     }
+
+    
     if(stride == 0) stride = size;
     if(sizeof(T) != size)
     {
         std::cerr << "Accessor size does not match destination type\n";
         return false;
     }
-
 
     //If sparse
     uint32_t sparce = accessor.sparse.is_sparse;
@@ -142,55 +115,93 @@ bool Mesh::LoadMeshData(std::filesystem::path filePath, std::vector<Vertex> &ver
     tg3_error_stack errors;
     tg3_model model;
     std::vector<glm::vec3> vertexBuffer;
+    std::vector<glm::vec3> normalBuffer;
     std::vector<uint32_t> indexBuffer;
-
+    std::vector<glm::vec2> uvBuffer;
+    
     tg3_parse_options_init(&opts);
     tg3_error_stack_init(&errors);
-
+    
     tg3_error_code err = tg3_parse_file(&model, &errors, filePath.c_str(), filePath.string().length(), &opts);
     if (err != TG3_OK) {
-    for (uint32_t i = 0; i < errors.count; i++) {
-        fprintf(stderr, "[%d] %s\n", (int)errors.entries[i].severity,
-                errors.entries[i].message ? errors.entries[i].message : "(null)");
+        for (uint32_t i = 0; i < errors.count; i++) {
+            fprintf(stderr, "[%d] %s\n", (int)errors.entries[i].severity,
+            errors.entries[i].message ? errors.entries[i].message : "(null)");
         }
     }
-
+    
     // ... use model ...
     if(model.meshes_count > 0){
         //Load mesh
-
+        
         //TODO: There's a lot of wasted memory in here
         for(uint32_t i = 0; i < model.meshes[0].primitives_count; i++){
             if(model.meshes[0].primitives[i].mode == -1){
-                    uint32_t vertex_i = -1;
-                    uint32_t normal_i = -1;
-                    uint32_t uv_i = -1;
-                    for(uint32_t j = 0; j < model.meshes[0].primitives[i].attributes_count; j++){
-                        const char *attrName = model.meshes[0].primitives[i].attributes[j].key.data;
-                        uint32_t nameLen = model.meshes[0].primitives[i].attributes[j].key.len;
-                        std::string attrString(attrName, nameLen);
-                        if(attrString == "POSITION" ){
-                            vertex_i = model.meshes[0].primitives[i].attributes[j].value;
-                            if(model.accessors[vertex_i].type == TG3_TYPE_VEC3){
-                                std::vector<glm::vec3> vertexByteBuffer;
-                                accessBuffer(model.accessors[vertex_i], model, vertexByteBuffer);
-                            }
-                            if(model.accessors[vertex_i].type == TG3_TYPE_VEC2){
-
+                uint32_t vertex_i = -1;
+                uint32_t normal_i = -1;
+                uint32_t uv_i = -1;
+                for(uint32_t j = 0; j < model.meshes[0].primitives[i].attributes_count; j++){
+                    const char *attrName = model.meshes[0].primitives[i].attributes[j].key.data;
+                    uint32_t nameLen = model.meshes[0].primitives[i].attributes[j].key.len;
+                    std::string attrString(attrName, nameLen);
+                    //Could this also be a macro? Is that too much?
+                    if(attrString == "POSITION" ){
+                        vertex_i = model.meshes[0].primitives[i].attributes[j].value;
+                        //Select the appropriate struct for the component type
+                        if(model.accessors[vertex_i].type == TG3_TYPE_VEC3){
+                            switch (model.accessors[vertex_i].type){
+                                #define X(type, name) \
+                                case TG3_COMPONENT_TYPE_##name: { \
+                                    std::vector<name##_TG3_Vec3> tempBuffer; \
+                                    accessBuffer(model.accessors[vertex_i], model, tempBuffer); \
+                                    for(uint64_t v_i = 0; v_i < model.accessors[vertex_i].count; v_i++){ \
+                                        vertexBuffer.push_back(glm::vec3(tempBuffer[v_i].x, tempBuffer[v_i].y, tempBuffer[v_i].z)); \
+                                    } \
+                                    break; \
+                                }
+                                    GLTF_COMPONENT_TYPES(X)
+                                    #undef X
                             }
                         }
-                        if(attrString == "NORMAL") normal_i = model.meshes[0].primitives[i].attributes[j].value;
-                        if(attrString == "TEXCOORD_0") uv_i = model.meshes[0].primitives[i].attributes[j].value;
-                        //Continue parsing primitives here
                     }
-                }
+                    if(attrString == "NORMAL"){
+                        if(model.accessors[normal_i].type == TG3_TYPE_VEC3){
+                            switch(model.accessors[normal_i].type){
+                                #define X(type, name) \
+                                case TG3_COMPONENT_TYPE_##name: { \
+                                    std::vector<name##_TG3_Vec3> tempBuffer; \
+                                    accessBuffer(model.accessors[normal_i], model, tempBuffer); \
+                                    for(uint64_t n_i = 0; n_i < model.accessors[normal_i].count; n_i++){ \
+                                        normalBuffer.push_back(glm::vec3(tempBuffer[n_i].x, tempBuffer[n_i].y, tempBuffer[n_i].z)); \
+                                    } \
+                                    break; \
+                                }
+                                GLTF_COMPONENT_TYPES(X)
+                                #undef X
+                            }
+                        }
+                    }
+                    if(attrString == "TEXCOORD_0"){
+                        if(model.accessors[uv_i].type == TG3_TYPE_VEC2){
+                            switch(model.accessors[uv_i].type){
+                                #define X(type, name) \
+                                case TG3_COMPONENT_TYPE_##name: { \
+                                    std::vector<name##_TG3_Vec2> tempBuffer; \
+                                    accessBuffer(model.accessors[uv_i], model, tempBuffer); \
+                                    for(uint64_t t_i = 0; t_i < model.accessors[uv_i].count; t_i++){ \
+                                        uvBuffer.push_back(glm::vec2(tempBuffer[t_i].x, tempBuffer[t_i].y)); \
+                                    } \
+                                    break; \
+                                }
+                                    GLTF_COMPONENT_TYPES(X)
+                                    #undef X
+                            }
+                        }
+                    }
+                }        
+            }
         }
-            //vertices.resize(model.meshes[0].);
-            //vertices.resize();
-
     }
-
-
     tg3_model_free(&model);
     tg3_error_stack_free(&errors);
     return false;
