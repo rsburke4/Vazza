@@ -11,13 +11,13 @@ template<typename T>
 bool accessBuffer(const tg3_accessor &accessor, tg3_model &model, std::vector<T> &data){
     tg3_buffer_view buffer_view = model.buffer_views[accessor.buffer_view];
     uint32_t comp_type = accessor.component_type;
-    uint32_t type = accessor.type; //This should be used after the data is returned
+    uint32_t acc_type = accessor.type; //This should be used after the data is returned
     uint64_t count = accessor.count;
     uint64_t stride = buffer_view.byte_stride;
     uint32_t size = 0;
     uint64_t offset = buffer_view.byte_offset + accessor.byte_offset;
 
-    switch(accessor.component_type){
+    switch(comp_type){
         #define X(type, name) \
         case TG3_COMPONENT_TYPE_##name: \
             size = sizeof(type); \
@@ -25,7 +25,7 @@ bool accessBuffer(const tg3_accessor &accessor, tg3_model &model, std::vector<T>
         GLTF_COMPONENT_TYPES(X)
         #undef X
     }
-    switch(accessor.type){
+    switch(acc_type){
         #define X(type, num) \
         case(TG3_TYPE_##type): \
             size *= num; \
@@ -135,21 +135,43 @@ bool Mesh::LoadMeshData(std::filesystem::path filePath, std::vector<Vertex> &ver
         //Load mesh
         
         //TODO: There's a lot of wasted memory in here
+        //TODO: Put a lot of this in a function
         for(uint32_t i = 0; i < model.meshes[0].primitives_count; i++){
-            if(model.meshes[0].primitives[i].mode == -1){
+            if(model.meshes[0].primitives[i].mode == TG3_MODE_TRIANGLES){
                 uint32_t vertex_i = -1;
                 uint32_t normal_i = -1;
                 uint32_t uv_i = -1;
+                uint32_t indices_i = model.meshes[0].primitives->indices;
+                //Only one index array per primitive
+                if(indices_i >= 0){
+                    //Load indices here
+                    if(model.accessors[indices_i].type == TG3_TYPE_SCALAR){
+                        switch(model.accessors[indices_i].component_type){
+                            #define X(type, name) \
+                            case TG3_COMPONENT_TYPE_##name: { \
+                                std::vector<type> tempBuffer; \
+                                accessBuffer(model.accessors[indices_i], model, tempBuffer); \
+                                for(uint64_t i_i = 0; i_i < model.accessors[indices_i].count; i_i++){ \
+                                    indexBuffer.push_back(static_cast<uint32_t>(tempBuffer[i_i])); \
+                                } \
+                                break; \
+                            }
+                            GLTF_COMPONENT_TYPES(X)
+                            #undef X
+                        }
+                    }
+                }
+                //Possibly multiple attributes per mesh
                 for(uint32_t j = 0; j < model.meshes[0].primitives[i].attributes_count; j++){
                     const char *attrName = model.meshes[0].primitives[i].attributes[j].key.data;
                     uint32_t nameLen = model.meshes[0].primitives[i].attributes[j].key.len;
                     std::string attrString(attrName, nameLen);
                     //Could this also be a macro? Is that too much?
-                    if(attrString == "POSITION" ){
+                    if(attrString == "POSITION"){
                         vertex_i = model.meshes[0].primitives[i].attributes[j].value;
                         //Select the appropriate struct for the component type
                         if(model.accessors[vertex_i].type == TG3_TYPE_VEC3){
-                            switch (model.accessors[vertex_i].type){
+                            switch (model.accessors[vertex_i].component_type){
                                 #define X(type, name) \
                                 case TG3_COMPONENT_TYPE_##name: { \
                                     std::vector<name##_TG3_Vec3> tempBuffer; \
@@ -159,14 +181,15 @@ bool Mesh::LoadMeshData(std::filesystem::path filePath, std::vector<Vertex> &ver
                                     } \
                                     break; \
                                 }
-                                    GLTF_COMPONENT_TYPES(X)
-                                    #undef X
+                                 GLTF_COMPONENT_TYPES(X)
+                                #undef X
                             }
                         }
                     }
                     if(attrString == "NORMAL"){
+                        normal_i = model.meshes[0].primitives[i].attributes[j].value;
                         if(model.accessors[normal_i].type == TG3_TYPE_VEC3){
-                            switch(model.accessors[normal_i].type){
+                            switch(model.accessors[normal_i].component_type){
                                 #define X(type, name) \
                                 case TG3_COMPONENT_TYPE_##name: { \
                                     std::vector<name##_TG3_Vec3> tempBuffer; \
@@ -182,8 +205,9 @@ bool Mesh::LoadMeshData(std::filesystem::path filePath, std::vector<Vertex> &ver
                         }
                     }
                     if(attrString == "TEXCOORD_0"){
+                        uv_i = model.meshes[0].primitives[i].attributes[j].value;
                         if(model.accessors[uv_i].type == TG3_TYPE_VEC2){
-                            switch(model.accessors[uv_i].type){
+                            switch(model.accessors[uv_i].component_type){
                                 #define X(type, name) \
                                 case TG3_COMPONENT_TYPE_##name: { \
                                     std::vector<name##_TG3_Vec2> tempBuffer; \

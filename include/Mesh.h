@@ -61,10 +61,11 @@ class Mesh : public Resource{
       VkBuffer GetIndexBuffer() const { return indexBuffer; }
       uint32_t GetVertexCount() const { return vertexCount; }
       uint32_t GetIndexCount() const { return indexCount; }
+            bool LoadMeshData(std::filesystem::path filePath, std::vector<Vertex> &vertices, std::vector<uint32_t> &indices);
       void Render(){};
 
     private:
-      bool LoadMeshData(std::filesystem::path filePath, std::vector<Vertex> &vertices, std::vector<uint32_t> &indices);
+
       void CreateVertexBuffer(std::vector<Vertex> &vertices);       // Upload vertex attributes to GPU
       void CreateIndexBuffer(std::vector<uint32_t> &indices);
       
