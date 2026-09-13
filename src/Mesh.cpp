@@ -127,19 +127,12 @@ bool Mesh::doUnload(){
     if (IsLoaded()) {
         // Phase 3a: Obtain device handle for resource destruction
         VkDevice device = Application::GetInstance()->GetVulkanContext()->device;
+        VmaAllocator allocator = Application::GetInstance()->GetVulkanContext()->allocator;
 
-        //This is the general structure for unloading but it's not the right syntax
-       /* // Phase 3b: Destroy buffers and free GPU memory in proper sequence
-        // Index resources cleaned up first to maintain clear dependency order
-        device.destroyBuffer(indexBuffer);         // Destroy index buffer object
-        device.freeMemory(indexBufferMemory);      // Release index buffer memory
-
-        // Vertex resources cleaned up second
-        device.destroyBuffer(vertexBuffer);        // Destroy vertex buffer object
-        device.freeMemory(vertexBufferMemory);     // Release vertex buffer memory
-
-        // Phase 3c: Update base class state to reflect unloaded condition
-        Resource::Unload();*/
+        vmaDestroyBuffer(allocator, vertexBuffer, vBufferAllocation);
+        vmaDestroyBuffer(allocator, indexBuffer, iBufferAllocation);
+        Unload();
+        
         return true;
     }
     return false;
