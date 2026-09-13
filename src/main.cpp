@@ -95,6 +95,7 @@ glm::vec3 objectRotations[3]{};
 Slang::ComPtr<slang::IGlobalSession> slangGlobalSession;
 
 std::vector<ResourceHandle<Texture>> monkeyColors;
+ResourceHandle<Mesh> monkeyMesh;
 
 int main(int argc, char* argv[]){
 	Application *tutorialApplication = Application::GetInstance();
@@ -118,12 +119,6 @@ int main(int argc, char* argv[]){
 	swapchainImageViews = tutorialApplication->GetRenderingContext()->swapchainImageViews;
 	swapchain = tutorialApplication->GetRenderingContext()->swapchain;
 
-	//Load model
-	Mesh testMesh = Mesh("./assets/Box.glb");
-	testMesh.doLoad();
-	/*std::vector<Vertex> testVerts;
-	std::vector<uint32_t> testInds;
-	testMesh.LoadMeshData("./assets/Box.glb", testVerts, testInds);*/
 
 	//Swapchain creation
 	//TODO: This is the bare minimum, and should be extended later
@@ -135,48 +130,10 @@ int main(int argc, char* argv[]){
 
 	ResourceManager resourceManager;
 
-	std::cout << "Image View\n";
-
-	std::cout << "Text image loading\n";
-	//Texture testImage = Texture("test", "./assets/suzanne0.ktx");
-	//testImage.Load();
-
-	//Load mesh (DOES NOT HANDLE BAD DATA WELL)
-	//ALL DATA MUST HAVE NORMALS AND TEXTURE COORDS
 	//TODO: switch to gltf/glb
-	tinyobj::attrib_t attrib;
-	std::vector<tinyobj::shape_t> shapes;
-	std::vector<tinyobj::material_t> materials;
-	chk(tinyobj::LoadObj(&attrib, &shapes, &materials, nullptr, nullptr, "./assets/suzanne.obj"));
-	//Convert tinyobj data into Vulkan usable stuff
-	const VkDeviceSize indexCount{shapes[0].mesh.indices.size()};
-	std::vector<Vertex> vertices{};
-	std::vector<uint16_t> indices{};
-	for(auto& index : shapes[0].mesh.indices){
-		Vertex v{
-			.pos = {attrib.vertices[index.vertex_index * 3], -attrib.vertices[index.vertex_index * 3 + 1], attrib.vertices[index.vertex_index * 3 + 2]},
-			.normal = {attrib.normals[index.normal_index * 3], -attrib.normals[index.normal_index * 3 + 1], attrib.normals[index.normal_index * 3 + 2]},
-			.uv = {attrib.texcoords[index.texcoord_index * 2], 1.0 - attrib.texcoords[index.texcoord_index * 2 + 1]},
-		};
-		vertices.push_back(v);
-		indices.push_back(indices.size());
-	}
-	//Move the model to the GPU
-	VkDeviceSize vBufSize {sizeof(Vertex) * vertices.size()};
-	VkDeviceSize iBufSize {sizeof(uint16_t) * indices.size()};
-	VkBufferCreateInfo bufferCI{
-		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		.size = vBufSize + iBufSize,
-		.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT
-	};
-	VmaAllocationCreateInfo vBufferAllocCI{
-		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-		.usage = VMA_MEMORY_USAGE_AUTO
-	};
-	VmaAllocationInfo vBufferAllocInfo{};
-	chk(vmaCreateBuffer(allocator, &bufferCI, &vBufferAllocCI, &vBuffer, &vBufferAllocation, &vBufferAllocInfo));
-	memcpy(vBufferAllocInfo.pMappedData, vertices.data(), vBufSize);
-	memcpy(((char*)vBufferAllocInfo.pMappedData) + vBufSize, indices.data(), iBufSize);
+
+	monkeyMesh = resourceManager.Load<Mesh>("./assets/suzanne.glb");
+
 
 	for(uint32_t i = 0; i < maxFramesInFlight; i++){
 		VkBufferCreateInfo uBufferCI{
@@ -554,10 +511,16 @@ int main(int argc, char* argv[]){
 			vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 			VkDeviceSize vOffset{ 0 };
 			vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSetTex, 0, nullptr);
-			vkCmdBindVertexBuffers(cb, 0, 1, &vBuffer, &vOffset);
-			vkCmdBindIndexBuffer(cb, vBuffer, vBufSize, VK_INDEX_TYPE_UINT16);
+
+			vkCmdBindVertexBuffers(cb, 0, 1, &monkeyMesh->GetVertexBuffer(), &vOffset);
+			vkCmdBindIndexBuffer(cb, monkeyMesh->GetIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
 			vkCmdPushConstants(cb, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(VkDeviceAddress), &shaderDataBuffers[frameIndex].deviceAddress);
-			vkCmdDrawIndexed(cb, indexCount, 3, 0, 0, 0);
+			vkCmdDrawIndexed(cb, monkeyMesh->GetIndexCount(), 3, 0, 0, 0);
+
+//			vkCmdBindVertexBuffers(cb, 0, 1, &vBuffer, &vOffset);
+//			vkCmdBindIndexBuffer(cb, vBuffer, vBufSize, VK_INDEX_TYPE_UINT16);
+//			vkCmdPushConstants(cb, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(VkDeviceAddress), &shaderDataBuffers[frameIndex].deviceAddress);
+//			vkCmdDrawIndexed(cb, indexCount, 3, 0, 0, 0);
 			vkCmdEndRenderingKHR(cb);
 
 			VkImageMemoryBarrier2KHR barrierPresent{
@@ -657,7 +620,7 @@ int main(int argc, char* argv[]){
 	for(auto i = 0; i < swapchainImageViews.size(); i++){
 		vkDestroyImageView(device, swapchainImageViews[i], nullptr);
 	}
-	vmaDestroyBuffer(allocator, vBuffer, vBufferAllocation);
+	//vmaDestroyBuffer(allocator, vBuffer, vBufferAllocation);
 	
 	resourceManager.UnloadAll();
 
@@ -669,6 +632,14 @@ int main(int argc, char* argv[]){
 	vkDestroySurfaceKHR(instance, surface, nullptr);
 	vkDestroyCommandPool(device, commandPool, nullptr);
 	vkDestroyShaderModule(device, shaderModule, nullptr);
+
+	#ifdef DEBUG 
+		char* stats;
+		vmaBuildStatsString(allocator, &stats, VK_TRUE);
+		printf("%s\n", stats);
+		vmaFreeStatsString(allocator, stats);
+	#endif
+
 	vmaDestroyAllocator(allocator);
 	SDL_DestroyWindow(window);
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);

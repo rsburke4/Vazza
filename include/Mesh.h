@@ -55,8 +55,10 @@ class Mesh : public Resource{
       bool doLoad() override;
       bool doUnload() override;
 
-      VkBuffer GetVertexBuffer() const { return vertexBuffer; }
-      VkBuffer GetIndexBuffer() const { return indexBuffer; }
+      const VkBuffer& GetVertexBuffer() { return vertexBuffer; }
+      const VkBuffer& GetIndexBuffer() const { return indexBuffer; }
+      const VkDeviceSize& GetVertexBufferSize() const { return vBufferSize; }
+      const VkDeviceSize& GetIndexBufferSize() const { return iBufferSize; }
       uint32_t GetVertexCount() const { return vertexCount; }
       uint32_t GetIndexCount() const { return indexCount; }
             bool LoadMeshData(std::filesystem::path filePath,
@@ -70,14 +72,16 @@ class Mesh : public Resource{
       void CreateIndexBuffer(std::vector<uint32_t> &indices);
       
       VkBuffer vertexBuffer;                // GPU buffer containing vertex attribute data
+      VkDeviceSize vBufferSize;
       VmaAllocation vBufferAllocation;
-      VkDeviceSize vertexBufferOffset;      // Offset within the memory allocation for vertex buffer
+      //VkDeviceSize vertexBufferOffset;      // Offset within the memory allocation for vertex buffer
       uint32_t vertexCount = 0;               // Number of vertices in this mesh
 
       // Index data management - defines triangle connectivity using vertex indices
       VkBuffer indexBuffer;                 // GPU buffer containing triangle index data
+      VkDeviceSize iBufferSize;
       VmaAllocation iBufferAllocation;
-      VkDeviceSize indexBufferOffset;       // Offset within the memory allocation for index buffer
+      //VkDeviceSize indexBufferOffset;       // Offset within the memory allocation for index buffer
       uint32_t indexCount = 0;                // Number of indices in this mesh (typically 3 per triangle)
 
       const std::filesystem::path filePath;

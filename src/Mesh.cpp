@@ -1,6 +1,5 @@
 //#include "../include/Mesh.h"
 
-
 #include "Mesh.h"
 #include "tiny_gltf_v3.h"
 #include <string>
@@ -63,9 +62,6 @@ bool accessBuffer(const tg3_accessor &accessor, tg3_model &model, std::vector<T>
 }
 
 bool Mesh::doLoad(){
-        // Step 2a: Construct file path using standardized naming convention
-        std::string filePath = "models/" + GetId() + ".gltf";
-
         // Step 2b: Parse geometric data from file format into CPU-accessible structures
         std::vector<Vertex> vertices;      // Temporary CPU storage for vertex attributes
         std::vector<uint32_t> indices;     // Temporary CPU storage for triangle indices
@@ -82,12 +78,12 @@ bool Mesh::doLoad(){
         vertexCount = static_cast<uint32_t>(vertices.size());
         indexCount = static_cast<uint32_t>(indices.size());
 
-        return Resource::Load();            // Mark resource as successfully loaded
+        return true;           // Mark resource as successfully loaded
 }
 
 //TODO: These are very similar. Maybe a helper function for creating buffers?
 void Mesh::CreateVertexBuffer(std::vector<Vertex> &vertices){
-    VkDeviceSize vBufferSize {sizeof(Vertex) * vertices.size()};
+    vBufferSize = VkDeviceSize {sizeof(Vertex) * vertices.size()};
     VkBufferCreateInfo vBufferCI{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .pNext = nullptr,
@@ -101,11 +97,13 @@ void Mesh::CreateVertexBuffer(std::vector<Vertex> &vertices){
     VmaAllocationInfo vBufferAllocInfo{};
     VmaAllocator allocator = Application::GetInstance()->GetVulkanContext()->allocator;
     chk(vmaCreateBuffer(allocator, &vBufferCI, &vBufferAllocCI, &vertexBuffer, &vBufferAllocation, &vBufferAllocInfo));
+    std::string vBufferName = filePath.string() + "mesh index buffer";
+    vmaSetAllocationName(allocator, vBufferAllocation, vBufferName.c_str());
     memcpy(vBufferAllocInfo.pMappedData, vertices.data(), vBufferSize);
 }
 
 void Mesh::CreateIndexBuffer(std::vector<uint32_t> &indices){
-    VkDeviceSize iBufferSize {sizeof(uint32_t) * indices.size()};
+    iBufferSize = VkDeviceSize {sizeof(uint32_t) * indices.size()};
     VkBufferCreateInfo iBufferCI{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .pNext = nullptr,
@@ -118,7 +116,9 @@ void Mesh::CreateIndexBuffer(std::vector<uint32_t> &indices){
     };
     VmaAllocationInfo iBufferAllocInfo{};
     VmaAllocator allocator = Application::GetInstance()->GetVulkanContext()->allocator;
-    chk(vmaCreateBuffer(allocator, &iBufferCI, &iBufferAllocCI, &vertexBuffer, &iBufferAllocation, &iBufferAllocInfo));
+    chk(vmaCreateBuffer(allocator, &iBufferCI, &iBufferAllocCI, &indexBuffer, &iBufferAllocation, &iBufferAllocInfo));
+    std::string iBufferName = filePath.string() + "mesh index buffer";
+    vmaSetAllocationName(allocator, iBufferAllocation, iBufferName.c_str());
     memcpy(iBufferAllocInfo.pMappedData, indices.data(), iBufferSize);
 }
 
@@ -131,8 +131,7 @@ bool Mesh::doUnload(){
 
         vmaDestroyBuffer(allocator, vertexBuffer, vBufferAllocation);
         vmaDestroyBuffer(allocator, indexBuffer, iBufferAllocation);
-        Unload();
-        
+
         return true;
     }
     return false;
@@ -171,10 +170,10 @@ bool Mesh::LoadMeshData(std::filesystem::path filePath,
         //TODO: Put a lot of this in a function
         for(uint32_t i = 0; i < model.meshes[0].primitives_count; i++){
             if(model.meshes[0].primitives[i].mode == TG3_MODE_TRIANGLES){
-                uint32_t vertex_i = -1;
-                uint32_t normal_i = -1;
-                uint32_t uv_i = -1;
-                uint32_t indices_i = model.meshes[0].primitives->indices;
+                int32_t vertex_i = -1;
+                int32_t normal_i = -1;
+                int32_t uv_i = -1;
+                int32_t indices_i = model.meshes[0].primitives->indices;
                 //Only one index array per primitive
                 if(indices_i >= 0){
                     //Load indices here
@@ -185,7 +184,7 @@ bool Mesh::LoadMeshData(std::filesystem::path filePath,
                                 std::vector<type> tempBuffer; \
                                 accessBuffer(model.accessors[indices_i], model, tempBuffer); \
                                 for(uint64_t i_i = 0; i_i < model.accessors[indices_i].count; i_i++){ \
-                                    indexBuffer.push_back(static_cast<uint32_t>(tempBuffer[i_i])); \
+                                    indices.push_back(static_cast<uint32_t>(tempBuffer[i_i])); \
                                 } \
                                 break; \
                             }
