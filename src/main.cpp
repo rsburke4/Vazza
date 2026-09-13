@@ -74,8 +74,6 @@ VkImage depthImage;
 VmaAllocator allocator{ VK_NULL_HANDLE };
 VmaAllocation depthImageAllocation;
 VkImageView depthImageView;
-VkBuffer vBuffer{ VK_NULL_HANDLE };
-VmaAllocation vBufferAllocation{ VK_NULL_HANDLE };
 VkCommandPool commandPool{ VK_NULL_HANDLE };
 VkDescriptorPool descriptorPool{ VK_NULL_HANDLE };
 VkDescriptorSetLayout descriptorSetLayoutTex{ VK_NULL_HANDLE };
@@ -133,6 +131,8 @@ int main(int argc, char* argv[]){
 	//TODO: switch to gltf/glb
 
 	monkeyMesh = resourceManager.Load<Mesh>("./assets/suzanne.glb");
+	//This mesh is on my computer. It looks cool.
+	//monkeyMesh = resourceManager.Load<Mesh>("./assets/cat_duelist_joined.glb");
 
 
 	for(uint32_t i = 0; i < maxFramesInFlight; i++){
@@ -517,10 +517,6 @@ int main(int argc, char* argv[]){
 			vkCmdPushConstants(cb, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(VkDeviceAddress), &shaderDataBuffers[frameIndex].deviceAddress);
 			vkCmdDrawIndexed(cb, monkeyMesh->GetIndexCount(), 3, 0, 0, 0);
 
-//			vkCmdBindVertexBuffers(cb, 0, 1, &vBuffer, &vOffset);
-//			vkCmdBindIndexBuffer(cb, vBuffer, vBufSize, VK_INDEX_TYPE_UINT16);
-//			vkCmdPushConstants(cb, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(VkDeviceAddress), &shaderDataBuffers[frameIndex].deviceAddress);
-//			vkCmdDrawIndexed(cb, indexCount, 3, 0, 0, 0);
 			vkCmdEndRenderingKHR(cb);
 
 			VkImageMemoryBarrier2KHR barrierPresent{
@@ -620,7 +616,6 @@ int main(int argc, char* argv[]){
 	for(auto i = 0; i < swapchainImageViews.size(); i++){
 		vkDestroyImageView(device, swapchainImageViews[i], nullptr);
 	}
-	//vmaDestroyBuffer(allocator, vBuffer, vBufferAllocation);
 	
 	resourceManager.UnloadAll();
 
