@@ -119,10 +119,11 @@ int main(int argc, char* argv[]){
 	swapchain = tutorialApplication->GetRenderingContext()->swapchain;
 
 	//Load model
-	Mesh testMesh = Mesh("testMesh");
-	std::vector<Vertex> testVerts;
+	Mesh testMesh = Mesh("./assets/Box.glb");
+	testMesh.doLoad();
+	/*std::vector<Vertex> testVerts;
 	std::vector<uint32_t> testInds;
-	testMesh.LoadMeshData("./assets/Box.glb", testVerts, testInds);
+	testMesh.LoadMeshData("./assets/Box.glb", testVerts, testInds);*/
 
 	//Swapchain creation
 	//TODO: This is the bare minimum, and should be extended later

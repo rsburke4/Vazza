@@ -85,6 +85,43 @@ bool Mesh::doLoad(){
         return Resource::Load();            // Mark resource as successfully loaded
 }
 
+//TODO: These are very similar. Maybe a helper function for creating buffers?
+void Mesh::CreateVertexBuffer(std::vector<Vertex> &vertices){
+    VkDeviceSize vBufferSize {sizeof(Vertex) * vertices.size()};
+    VkBufferCreateInfo vBufferCI{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .pNext = nullptr,
+        .size = vBufferSize,
+        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
+    };
+    VmaAllocationCreateInfo vBufferAllocCI{
+		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+		.usage = VMA_MEMORY_USAGE_AUTO
+	};
+    VmaAllocationInfo vBufferAllocInfo{};
+    VmaAllocator allocator = Application::GetInstance()->GetVulkanContext()->allocator;
+    chk(vmaCreateBuffer(allocator, &vBufferCI, &vBufferAllocCI, &vertexBuffer, &vBufferAllocation, &vBufferAllocInfo));
+    memcpy(vBufferAllocInfo.pMappedData, vertices.data(), vBufferSize);
+}
+
+void Mesh::CreateIndexBuffer(std::vector<uint32_t> &indices){
+    VkDeviceSize iBufferSize {sizeof(uint32_t) * indices.size()};
+    VkBufferCreateInfo iBufferCI{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .pNext = nullptr,
+        .size = iBufferSize,
+        .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT
+    };
+    VmaAllocationCreateInfo iBufferAllocCI{
+		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+		.usage = VMA_MEMORY_USAGE_AUTO
+    };
+    VmaAllocationInfo iBufferAllocInfo{};
+    VmaAllocator allocator = Application::GetInstance()->GetVulkanContext()->allocator;
+    chk(vmaCreateBuffer(allocator, &iBufferCI, &iBufferAllocCI, &vertexBuffer, &iBufferAllocation, &iBufferAllocInfo));
+    memcpy(iBufferAllocInfo.pMappedData, indices.data(), iBufferSize);
+}
+
 bool Mesh::doUnload(){
     // Only proceed with cleanup if resources are currently loaded
     if (IsLoaded()) {
@@ -163,6 +200,9 @@ bool Mesh::LoadMeshData(std::filesystem::path filePath,
                             #undef X
                         }
                     }
+                    else{
+                        continue;
+                    }
                 }
                 //Possibly multiple attributes per mesh
                 for(uint32_t j = 0; j < model.meshes[0].primitives[i].attributes_count; j++){
@@ -227,7 +267,8 @@ bool Mesh::LoadMeshData(std::filesystem::path filePath,
                     }
                 }
                 if(vertex_i != -1){
-                    vertices.resize(model.accessors[vertex_i].count);
+                    vertexCount = static_cast<uint32_t>(model.accessors[vertex_i].count);
+                    vertices.resize(vertexCount);
                     for(int32_t verts = 0; verts < model.accessors[vertex_i].count; verts++){
                         vertices[verts].pos = glm::vec3(vertexBuffer[verts].x, vertexBuffer[verts].y, vertexBuffer[verts].z);
                     }
@@ -243,18 +284,17 @@ bool Mesh::LoadMeshData(std::filesystem::path filePath,
                     }
                 }
             }
+            else{
+                continue;
+            }
         }
+    }
+    if(vertices.size() == 0){
+        std::cerr << "Failed to load vertex buffer\n";
+        return false;
     }
 
     tg3_model_free(&model);
     tg3_error_stack_free(&errors);
-    return false;
-}
-
-void Mesh::CreateVertexBuffer(std::vector<Vertex> &vertices){
-    return;
-}
-
-void Mesh::CreateIndexBuffer(std::vector<uint32_t> &indices){
-    return;
+    return true;
 }

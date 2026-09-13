@@ -70,12 +70,14 @@ class Mesh : public Resource{
       void CreateIndexBuffer(std::vector<uint32_t> &indices);
       
       VkBuffer vertexBuffer;                // GPU buffer containing vertex attribute data
+      VmaAllocation vBufferAllocation;
       VkDeviceMemory vertexBufferMemory;    // GPU memory backing the vertex buffer
       VkDeviceSize vertexBufferOffset;      // Offset within the memory allocation for vertex buffer
       uint32_t vertexCount = 0;               // Number of vertices in this mesh
 
       // Index data management - defines triangle connectivity using vertex indices
       VkBuffer indexBuffer;                 // GPU buffer containing triangle index data
+      VmaAllocation iBufferAllocation;
       VkDeviceMemory indexBufferMemory;     // GPU memory backing the index buffer
       VkDeviceSize indexBufferOffset;       // Offset within the memory allocation for index buffer
       uint32_t indexCount = 0;                // Number of indices in this mesh (typically 3 per triangle)
