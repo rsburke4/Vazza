@@ -31,9 +31,7 @@ struct Vertex{
   //glm::vec4 color;
 };
 
-
 //XMacro Magic
-
 #define X(type, name) \
   struct name##_TG3_Vec2 { type x, y; }; \
   struct name##_TG3_Vec3 { type x, y, z; }; \
@@ -61,7 +59,9 @@ class Mesh : public Resource{
       VkBuffer GetIndexBuffer() const { return indexBuffer; }
       uint32_t GetVertexCount() const { return vertexCount; }
       uint32_t GetIndexCount() const { return indexCount; }
-            bool LoadMeshData(std::filesystem::path filePath, std::vector<Vertex> &vertices, std::vector<uint32_t> &indices);
+            bool LoadMeshData(std::filesystem::path filePath,
+              std::vector<Vertex> &vertices,
+              std::vector<uint32_t> &indices);
       void Render(){};
 
     private:

@@ -69,6 +69,7 @@ bool Mesh::doLoad(){
         // Step 2b: Parse geometric data from file format into CPU-accessible structures
         std::vector<Vertex> vertices;      // Temporary CPU storage for vertex attributes
         std::vector<uint32_t> indices;     // Temporary CPU storage for triangle indices
+        std::vector<Vertex> normals;
         if (!LoadMeshData(filePath, vertices, indices)) {
             return false;                   // Failed to parse file - abort loading
         }
@@ -110,7 +111,9 @@ bool Mesh::doUnload(){
 //TODO: Overhaul mesh support with full GLTF support
 //This would include a GLTF parser class for loading texture, and model resources
 //Somehow Resources would need a major rework
-bool Mesh::LoadMeshData(std::filesystem::path filePath, std::vector<Vertex> &vertices, std::vector<uint32_t> &indices){
+bool Mesh::LoadMeshData(std::filesystem::path filePath,
+    std::vector<Vertex> &vertices,
+    std::vector<uint32_t> &indices){
     tg3_parse_options opts;
     tg3_error_stack errors;
     tg3_model model;
@@ -222,10 +225,27 @@ bool Mesh::LoadMeshData(std::filesystem::path filePath, std::vector<Vertex> &ver
                             }
                         }
                     }
-                }        
+                }
+                if(vertex_i != -1){
+                    vertices.resize(model.accessors[vertex_i].count);
+                    for(int32_t verts = 0; verts < model.accessors[vertex_i].count; verts++){
+                        vertices[verts].pos = glm::vec3(vertexBuffer[verts].x, vertexBuffer[verts].y, vertexBuffer[verts].z);
+                    }
+                }
+                if(normal_i != -1){
+                    for(int32_t verts = 0; verts < model.accessors[vertex_i].count; verts++){
+                        vertices[verts].normal = glm::vec3(normalBuffer[verts].x, normalBuffer[verts].y, normalBuffer[verts].z);
+                    }          
+                }
+                if(uv_i != -1){
+                    for(int32_t verts = 0; verts < model.accessors[vertex_i].count; verts++){
+                        vertices[verts].uv = glm::vec2(uvBuffer[verts].x, uvBuffer[verts].y);
+                    }
+                }
             }
         }
     }
+
     tg3_model_free(&model);
     tg3_error_stack_free(&errors);
     return false;
