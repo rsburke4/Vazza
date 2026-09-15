@@ -39,11 +39,7 @@ bool Texture::doUnload(){
         //This ordering prevents use-after-free errors in GPU drivers
         vkDestroySampler(device, sampler, nullptr);
         vkDestroyImageView(device, imageView, nullptr);
-        //vkDestroyImage(device, image, nullptr);
         vmaDestroyImage(allocator, image, allocation);
-        //vkFreeMemory(device, memory, nullptr);
-        //vmaFreeMemory(allocator, allocation);
-
         return true;
     }
     return false;
@@ -208,6 +204,8 @@ void Texture::CreateVulkanImage(unsigned char* data, uint32_t size, ktxTexture *
         VmaAllocation imgSrcAllocation {};
         VmaAllocationInfo imgSrcAllocInfo {};
         chk(vmaCreateBuffer(appInstance->GetVulkanContext()->allocator, &imageBufferCI, &imgSrcAllocCI, &imageBuffer, &imgSrcAllocation, &imgSrcAllocInfo));
+        std::string imageName = filePath.string() + " image";
+        vmaSetAllocationName(appInstance->GetVulkanContext()->allocator, imgSrcAllocation, imageName.c_str());
         //Put data into host-side VkBuffer
         memcpy(imgSrcAllocInfo.pMappedData, data, size);
         vkCmdCopyBufferToImage(commandBuffer, imageBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(copyRegions.size()), copyRegions.data());

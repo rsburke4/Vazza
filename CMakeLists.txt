@@ -8,6 +8,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Vulkan REQUIRED)
 
 
+add_library(tinygltf-v3 INTERFACE)
+target_include_directories(tinygltf-v3 INTERFACE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/tinygltf
+)
+#target_compile_features(tinygltf-v3 INTERFACE cxx_std_17)
+
+
 include_directories(SYSTEM $ENV{VULKAN_SDK/include})
 find_library(Slang_LIBRARY NAMES slang slang-compiler HINTS "$ENV{VULKAN_SDK}/lib" REQUIRED)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/VMA)
@@ -47,6 +54,7 @@ set(TINY_OBJ_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/tinyobjloader/)
 set(GLM_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/glm/)
 set(KTX_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/KTX-Software/lib/include)
 set(VULKAN_INCLUDE "$ENV{VULKAN_SDK}/include")
+set(GLTF_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/tinygltf)
 
 #add_subdirectory(thirdparty/SDL)
 #dd_subdirectory(thirdparty/KTX-Software)
@@ -84,6 +92,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 	${GLM_INCLUDE}
 	${KTX_INCLUDE}
 	${VULKAN_INCLUDE}
+	${GLTF_INCLUDE}
 )
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
@@ -96,6 +105,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
 	#	${KTX_LIB}
 #	${GLM_LIB}
 	Vulkan::Vulkan
+	tinygltf-v3
 )
 
 enable_testing()

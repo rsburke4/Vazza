@@ -1,5 +1,5 @@
-#ifndef __TEXTURE_H__
-#define __TEXTURE_H__
+#ifndef __TEXTURE_RESOURCE_H__
+#define __TEXTURE_RESOURCE_H__
 
 #include "Resource.h"
 #include "Application.h"
@@ -21,7 +21,7 @@ class Texture : public Resource{
         const std::filesystem::path filePath;
 
 
-    //All the normal information about the image
+        //All the normal information about the image
         int width = 0;
         int height = 0;
         int layers = 0; //Will usually be 1?
