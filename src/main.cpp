@@ -253,7 +253,7 @@ int main(int argc, char* argv[]){
 		.pImageInfo = textureDescriptors.data()
 	};
 	vkUpdateDescriptorSets(device, 1, &writeDescSet, 0, nullptr);
-
+/*
 	//Loading shaders
 	slang::createGlobalSession(slangGlobalSession.writeRef());
 	auto slangTargets{ std::to_array<slang::TargetDesc>({ {
@@ -284,7 +284,7 @@ int main(int argc, char* argv[]){
 		.pCode = (uint32_t*)spirv->getBufferPointer()
 	};
 	VkShaderModule shaderModule{};
-	chk(vkCreateShaderModule(device, &shaderModuleCI, nullptr, &shaderModule));
+	chk(vkCreateShaderModule(device, &shaderModuleCI, nullptr, &shaderModule));*/
 
 	//Graphics Pipeline Creation
 	VkPushConstantRange pushConstantRange{
@@ -320,6 +320,7 @@ int main(int argc, char* argv[]){
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
 		.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
 	};
+	VkShaderModule shaderModule;
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages{
 		{.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 		.stage = VK_SHADER_STAGE_VERTEX_BIT,
