@@ -8,7 +8,7 @@
 
 class Shader : public Resource{
     public:
-        Shader(const std::string& id, VkShaderStageFlagBits shaderStage) : Resource(id), filePath(id), stage(shaderStage){}
+        Shader(const std::string& id) : Resource(id), filePath(id){}
         ~Shader() override{
             Unload();
         }
@@ -20,8 +20,8 @@ class Shader : public Resource{
         VkShaderStageFlagBits GetStage() const { return stage; }
 
     private:
-        bool ReadFile(std::vector<char>& buffer);
-        void CreateShaderModule(const std::vector<char>& buffer);
+        bool ReadFile(std::vector<uint32_t>& buffer);
+        void CreateShaderModule(const std::vector<uint32_t>& buffer);
 
         VkShaderModule shaderModule;
         VkShaderStageFlagBits stage;
