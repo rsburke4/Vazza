@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include "volk.h"
 #include "Shader.h"
 #include "Application.h"
 
@@ -35,14 +36,42 @@ bool Shader::ReadFile(std::vector<uint32_t>& buffer){
 }
 
 void Shader::CreateShaderModule(const std::vector<uint32_t>& buffer){
+    std::cout << "Shader object address: " << this << std::endl;
     VkDevice device = Application::GetInstance()->GetVulkanContext()->device;
-	VkShaderModuleCreateInfo shaderModuleCI{
+	std::cout << "Device " << device << std::endl;
+    VkShaderModuleCreateInfo shaderModuleCI{
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
 		.codeSize = buffer.size() * sizeof(uint32_t),
-		.pCode = reinterpret_cast<const uint32_t*>(buffer.data())
+		.pCode = buffer.data()
 	};
+/*
+    std::cout
+    << "volkGetLoadedDevice = "
+    << volkGetLoadedDevice()
+    << "\n";
+*/
 
-	chk(vkCreateShaderModule(device, &shaderModuleCI, nullptr, &shaderModule));
+if (buffer.empty()) {
+    std::cerr << "Shader is empty\n";
+    return;
+}
+
+std::cout << std::hex
+          << "SPIR-V magic: 0x" << buffer[0]
+          << std::dec << std::endl;
+std::cout << "VK HEADER " <<  VK_HEADER_VERSION << "\n";
+
+auto pfnCreateShaderModule =
+    vkGetDeviceProcAddr(device, "vkCreateShaderModule");
+
+std::cout << "vkCreateShaderModule ptr: "
+          << reinterpret_cast<void*>(pfnCreateShaderModule)
+          << "\n";
+
+
+	vkCreateShaderModule(device, &shaderModuleCI, nullptr, &shaderModule);
 }
 
 bool Shader::doLoad(){

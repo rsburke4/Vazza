@@ -134,8 +134,8 @@ int main(int argc, char* argv[]){
 	//TODO: switch to gltf/glb
 
 	monkeyMesh = resourceManager.Load<Mesh>("./assets/suzanne.glb");
-	//fragmentShader = resourceManager.Load<Shader>("./assets/shaders/fragment.frag.spv");
-	vertexShader = resourceManager.Load<Shader>("./assets/shaders/vertex.vert.spv");
+	fragmentShader = resourceManager.Load<Shader>("./assets/shaders/shader.frag.spv");
+	vertexShader = resourceManager.Load<Shader>("./assets/shaders/shader.vert.spv");
 
 	//This mesh is on my computer. It looks cool.
 	//monkeyMesh = resourceManager.Load<Mesh>("./assets/cat_duelist_joined.glb");
