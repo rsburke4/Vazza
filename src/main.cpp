@@ -19,12 +19,8 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/quaternion.hpp"
-#include "ktx.h"
-#include "ktxvulkan.h"
 #include "Entity.h"
 #include <vulkan/vulkan.h>
-//#include "slang/slang.h"
-//#include "slang/slang-com-ptr.h"
 
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
@@ -91,7 +87,6 @@ VkPipeline pipeline;
 glm::ivec2 windowSize{};
 glm::vec3 camPose{0.0f, 0.0f, -6.0f};
 glm::vec3 objectRotations[3]{};
-//Slang::ComPtr<slang::IGlobalSession> slangGlobalSession;
 
 std::vector<ResourceHandle<Texture>> monkeyColors;
 ResourceHandle<Mesh> monkeyMesh;
@@ -132,7 +127,6 @@ int main(int argc, char* argv[]){
 	ResourceManager resourceManager;
 
 	//TODO: switch to gltf/glb
-
 	monkeyMesh = resourceManager.Load<Mesh>("./assets/suzanne.glb");
 	fragmentShader = resourceManager.Load<Shader>("./assets/shaders/fragment.frag.spv");
 	vertexShader = resourceManager.Load<Shader>("./assets/shaders/vertex.vert.spv");
@@ -601,7 +595,6 @@ int main(int argc, char* argv[]){
 	vkDestroySwapchainKHR(device, swapchain, nullptr);
 	vkDestroySurfaceKHR(instance, surface, nullptr);
 	vkDestroyCommandPool(device, commandPool, nullptr);
-	//vkDestroyShaderModule(device, shaderModule, nullptr);
 
 	#ifdef DEBUG 
 		char* stats;

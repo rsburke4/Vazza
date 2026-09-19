@@ -78,6 +78,5 @@ bool Shader::doUnload(){
         VkDevice device = Application::GetInstance()->GetVulkanContext()->device;
         vkDestroyShaderModule(device, shaderModule, nullptr);
     }
-
     return true;
 }
