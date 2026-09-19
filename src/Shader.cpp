@@ -46,30 +46,6 @@ void Shader::CreateShaderModule(const std::vector<uint32_t>& buffer){
 		.codeSize = buffer.size() * sizeof(uint32_t),
 		.pCode = buffer.data()
 	};
-/*
-    std::cout
-    << "volkGetLoadedDevice = "
-    << volkGetLoadedDevice()
-    << "\n";
-*/
-
-if (buffer.empty()) {
-    std::cerr << "Shader is empty\n";
-    return;
-}
-
-std::cout << std::hex
-          << "SPIR-V magic: 0x" << buffer[0]
-          << std::dec << std::endl;
-std::cout << "VK HEADER " <<  VK_HEADER_VERSION << "\n";
-
-auto pfnCreateShaderModule =
-    vkGetDeviceProcAddr(device, "vkCreateShaderModule");
-
-std::cout << "vkCreateShaderModule ptr: "
-          << reinterpret_cast<void*>(pfnCreateShaderModule)
-          << "\n";
-
 
 	vkCreateShaderModule(device, &shaderModuleCI, nullptr, &shaderModule);
 }
