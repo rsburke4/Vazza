@@ -64,7 +64,7 @@ set(GLTF_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/tinygltf)
 
 
 file(GLOB SOURCES CONFIGURE_DEPENDS "src/*.cpp")
-add_executable(${CMAKE_PROJECT_NAME} src/main.cpp ${SOURCES} assets/shader.slang)
+add_executable(${CMAKE_PROJECT_NAME} src/main.cpp ${SOURCES})
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE include)
 
 
@@ -109,7 +109,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
 )
 
 enable_testing()
-add_executable(run_tests src/tests/unit_tests.cpp assets/shader.slang)
+add_executable(run_tests src/tests/unit_tests.cpp)
 target_include_directories(run_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/KTX-Software/tests/gtest/include
 )

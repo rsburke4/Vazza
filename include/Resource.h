@@ -2,6 +2,7 @@
 #define __RESOURCE_H__
 
 #include <memory>
+#include <iostream>
 #include <string>
 #include <typeindex>
 #include <unordered_map>
@@ -40,8 +41,12 @@ class Resource
 
     void Unload()
     {
-        doUnload();
-        loaded = false;
+        if(doUnload()){
+            loaded = false;
+        }
+        else{
+            std::cerr << "Resource failed to unload\n";
+        }
     }
 
   protected:

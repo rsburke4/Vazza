@@ -9,21 +9,18 @@
 #include "Application.h"
 #include "Texture.h"
 #include "Mesh.h"
+#include "Shader.h"
 
+#include "volk.h"
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_vulkan.h"
 #include "vk_mem_alloc.h"
-#include "volk.h"
 #include "tiny_obj_loader.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/quaternion.hpp"
-#include "ktx.h"
-#include "ktxvulkan.h"
 #include "Entity.h"
 #include <vulkan/vulkan.h>
-#include "slang/slang.h"
-#include "slang/slang-com-ptr.h"
 
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
@@ -90,10 +87,11 @@ VkPipeline pipeline;
 glm::ivec2 windowSize{};
 glm::vec3 camPose{0.0f, 0.0f, -6.0f};
 glm::vec3 objectRotations[3]{};
-Slang::ComPtr<slang::IGlobalSession> slangGlobalSession;
 
 std::vector<ResourceHandle<Texture>> monkeyColors;
 ResourceHandle<Mesh> monkeyMesh;
+ResourceHandle<Shader> vertexShader;
+ResourceHandle<Shader> fragmentShader;
 
 int main(int argc, char* argv[]){
 	Application *tutorialApplication = Application::GetInstance();
@@ -129,8 +127,10 @@ int main(int argc, char* argv[]){
 	ResourceManager resourceManager;
 
 	//TODO: switch to gltf/glb
-
 	monkeyMesh = resourceManager.Load<Mesh>("./assets/suzanne.glb");
+	fragmentShader = resourceManager.Load<Shader>("./assets/shaders/fragment.frag.spv");
+	vertexShader = resourceManager.Load<Shader>("./assets/shaders/vertex.vert.spv");
+
 	//This mesh is on my computer. It looks cool.
 	//monkeyMesh = resourceManager.Load<Mesh>("./assets/cat_duelist_joined.glb");
 
@@ -198,7 +198,6 @@ int main(int argc, char* argv[]){
 		});
 	}
 
-
 	VkDescriptorBindingFlags descVariableFlag{ VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT };
 	VkDescriptorSetLayoutBindingFlagsCreateInfo descBindingFlags{ 
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
@@ -254,38 +253,6 @@ int main(int argc, char* argv[]){
 	};
 	vkUpdateDescriptorSets(device, 1, &writeDescSet, 0, nullptr);
 
-	//Loading shaders
-	slang::createGlobalSession(slangGlobalSession.writeRef());
-	auto slangTargets{ std::to_array<slang::TargetDesc>({ {
-		.format{SLANG_SPIRV},
-		.profile{slangGlobalSession->findProfile("spirv_1_4")}
-	}})};
-	auto slangOptions{ std::to_array<slang::CompilerOptionEntry>({{
-		slang::CompilerOptionName::EmitSpirvDirectly,
-		{slang::CompilerOptionValueKind::Int, 1}
-	}})};
-	slang::SessionDesc slangSessionDesc{
-		.targets{slangTargets.data()},
-		.targetCount{SlangInt(slangTargets.size())},
-		.defaultMatrixLayoutMode = SLANG_MATRIX_LAYOUT_COLUMN_MAJOR,
-		.compilerOptionEntries{slangOptions.data()},
-		.compilerOptionEntryCount{uint32_t(slangOptions.size())}
-	};
-	Slang::ComPtr<slang::ISession> slangSession;
-	slangGlobalSession->createSession(slangSessionDesc, slangSession.writeRef());
-	Slang::ComPtr<slang::IModule> slangModule{
-		slangSession->loadModuleFromSource("triangle", "assets/shader.slang", nullptr, nullptr)
-	};
-	Slang::ComPtr<ISlangBlob> spirv;
-	slangModule->getTargetCode(0, spirv.writeRef());
-	VkShaderModuleCreateInfo shaderModuleCI{
-		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-		.codeSize = spirv->getBufferSize(),
-		.pCode = (uint32_t*)spirv->getBufferPointer()
-	};
-	VkShaderModule shaderModule{};
-	chk(vkCreateShaderModule(device, &shaderModuleCI, nullptr, &shaderModule));
-
 	//Graphics Pipeline Creation
 	VkPushConstantRange pushConstantRange{
 		.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -320,13 +287,15 @@ int main(int argc, char* argv[]){
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
 		.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
 	};
+	VkShaderModule vertShaderModule = vertexShader->GetShaderModule();
+	VkShaderModule fragShaderModule = fragmentShader->GetShaderModule();
 	std::vector<VkPipelineShaderStageCreateInfo> shaderStages{
 		{.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 		.stage = VK_SHADER_STAGE_VERTEX_BIT,
-		.module = shaderModule, .pName = "main"},
+		.module = vertShaderModule, .pName = "main"},
 		{.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 		.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-		.module = shaderModule, .pName = "main"}
+		.module = fragShaderModule, .pName = "main"}
 	};
 	VkPipelineViewportStateCreateInfo viewportState{
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
@@ -626,7 +595,6 @@ int main(int argc, char* argv[]){
 	vkDestroySwapchainKHR(device, swapchain, nullptr);
 	vkDestroySurfaceKHR(instance, surface, nullptr);
 	vkDestroyCommandPool(device, commandPool, nullptr);
-	vkDestroyShaderModule(device, shaderModule, nullptr);
 
 	#ifdef DEBUG 
 		char* stats;

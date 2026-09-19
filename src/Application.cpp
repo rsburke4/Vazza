@@ -1,9 +1,9 @@
+#include "volk.h"
 #include "Application.h"
 #include <vector>
 #include <vulkan/vulkan.h>
 #include "SDL3/SDL.h"
 #include "SDL3/SDL_vulkan.h"
-#include "volk.h"
 
 //TODO: Swap for agnostic function that checks for any layer support
 bool checkValidationLayerSupport(){
@@ -153,6 +153,7 @@ void Application::InitializeVulkan(){
 	};
 	chk(vkCreateDevice(vulkanContext.physicalDevice, &deviceCI, nullptr, &vulkanContext.device));
 	vkGetDeviceQueue(vulkanContext.device, vulkanContext.graphicsQueueFamily, 0, &vulkanContext.graphicsQueue);
+	volkLoadDevice(vulkanContext.device);
 
 	//Set up VMA
 	VmaVulkanFunctions vkFunctions{
