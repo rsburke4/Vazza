@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <cassert>
 
 //Global variables for simple rendering
 struct VulkanContext{

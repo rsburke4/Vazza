@@ -77,6 +77,10 @@ bool Shader::doUnload(){
     if(IsLoaded()){
         VkDevice device = Application::GetInstance()->GetVulkanContext()->device;
         vkDestroyShaderModule(device, shaderModule, nullptr);
+        return true;
     }
-    return true;
+    else{
+        std::cout << "Resource " << resourceId << " already unloaded.\n";
+        return true;
+    }
 }

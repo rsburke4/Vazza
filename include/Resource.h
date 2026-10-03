@@ -14,7 +14,6 @@ class ResourceHandle;
 class Resource
 {
   private:
-    std::string resourceId;
     bool loaded = false;
 
   public:
@@ -45,11 +44,12 @@ class Resource
             loaded = false;
         }
         else{
-            std::cerr << "Resource failed to unload\n";
+            std::cerr << "Resource " << resourceId << " failed to unload\n";
         }
     }
 
   protected:
+    const std::string resourceId;
     virtual bool doLoad() = 0;
     virtual bool doUnload() = 0;
 };
