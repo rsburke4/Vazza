@@ -42,7 +42,10 @@ bool Texture::doUnload(){
         vmaDestroyImage(allocator, image, allocation);
         return true;
     }
-    return false;
+    else{
+        std::cout << "Resource " << resourceId << " already unloaded.\n";
+        return true;
+    }
 }
 
 //TODO: Return format type as well?

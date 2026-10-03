@@ -131,10 +131,12 @@ bool Mesh::doUnload(){
 
         vmaDestroyBuffer(allocator, vertexBuffer, vBufferAllocation);
         vmaDestroyBuffer(allocator, indexBuffer, iBufferAllocation);
-
         return true;
     }
-    return false;
+    else{
+        std::cout << "Resource " << resourceId << " already unloaded.\n";
+        return true;
+    }
 }
 
 //TODO: Overhaul mesh support with full GLTF support
